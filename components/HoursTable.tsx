@@ -166,10 +166,10 @@ const HoursTable: React.FC<HoursTableProps> = ({ stores }) => {
             <table className="min-w-full divide-y divide-gray-200 border-collapse">
                 <thead className="text-xs font-bold text-white uppercase sticky top-0 z-30">
                 <tr>
-                    <th scope="col" rowSpan={2} className="sticky left-0 bg-orange-500 px-4 py-3 text-center tracking-wider z-20 w-32 align-middle">
+                    <th scope="col" rowSpan={2} className="md:sticky md:left-0 bg-orange-500 px-4 py-3 text-center tracking-wider z-20 w-32 align-middle">
                     エリア
                     </th>
-                    <th scope="col" rowSpan={2} className="sticky left-32 bg-orange-500 px-4 py-3 text-left tracking-wider z-20 w-52 align-middle border-l border-white/20">
+                    <th scope="col" rowSpan={2} className="md:sticky md:left-32 bg-orange-500 px-4 py-3 text-left tracking-wider z-20 w-52 align-middle border-l border-white/20">
                     店名
                     </th>
                     {headers.map((header) => (
@@ -193,10 +193,10 @@ const HoursTable: React.FC<HoursTableProps> = ({ stores }) => {
                     key={storeData.store.id} 
                     className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-orange-100 transition-colors duration-150`}
                     >
-                    <td className="sticky left-0 px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-700 z-10 w-32 border-r text-center bg-inherit align-middle">
+                    <td className="md:sticky md:left-0 px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-700 z-10 w-32 border-r text-center bg-inherit align-middle">
                         {storeData.store.prefecture}
                     </td>
-                    <td className="sticky left-32 px-4 py-4 whitespace-nowrap text-sm z-10 w-52 border-r bg-inherit align-middle">
+                    <td className="md:sticky md:left-32 px-4 py-4 whitespace-nowrap text-sm z-10 w-52 border-r bg-inherit align-middle">
                         <a 
                             href={storeData.store.url} 
                             target="_blank" 
