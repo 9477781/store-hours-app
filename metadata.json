@@ -1,0 +1,5 @@
+{
+  "name": "Business Hours Announcement App",
+  "description": "An application to display the daily business hours for approximately 100 stores, with data managed via a Google Spreadsheet and displayed on the official website. It shows a 7-day forecast, updating daily at 7:00 AM.",
+  "requestFramePermissions": []
+}
