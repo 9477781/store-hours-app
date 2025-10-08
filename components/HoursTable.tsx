@@ -162,7 +162,7 @@ const HoursTable: React.FC<HoursTableProps> = ({ stores }) => {
   return (
     <>
         {/* Desktop Table View */}
-        <div className="hidden md:block overflow-x-auto overflow-y-auto max-h-[75vh] bg-white rounded-lg shadow">
+        <div className="overflow-x-auto overflow-y-auto max-h-[75vh] bg-white rounded-lg shadow">
             <table className="min-w-full divide-y divide-gray-200 border-collapse">
                 <thead className="text-xs font-bold text-white uppercase sticky top-0 z-30">
                 <tr>
@@ -222,7 +222,7 @@ const HoursTable: React.FC<HoursTableProps> = ({ stores }) => {
         </div>
         
         {/* Mobile Card View */}
-        <div className="md:hidden space-y-4">
+        <div className="space-y-4 hidden">
             {stores.map((storeData) => (
             <div
                 key={storeData.store.id}
