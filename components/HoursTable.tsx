@@ -1,4 +1,3 @@
-
 import React, { useMemo } from 'react';
 import { StoreHoursResponse, Day } from '../types';
 import { JAPANESE_HOLIDAYS_2025 } from '../constants';
@@ -166,8 +165,8 @@ const HoursTable: React.FC<HoursTableProps> = ({ stores, selectedDates }) => {
 
   return (
     <>
-        {/* Desktop Table View - Always hidden */}
-        <div className="hidden">
+        {/* Desktop Table View */}
+        <div className="hidden md:block overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200 border-collapse">
                 <thead className="text-xs font-bold text-white uppercase sticky top-0 z-30">
                 <tr>
@@ -205,9 +204,9 @@ const HoursTable: React.FC<HoursTableProps> = ({ stores, selectedDates }) => {
                         <a 
                             href={storeData.store.url} 
                             target="_blank" 
-                            rel="noopener noreferrer" 
-                            className="font-semibold text-blue-600 hover:text-blue-800 hover:underline"
-                            aria-label={`${storeData.store.name}の詳細を新しいタブで開く`}
+                            rel="noopener noreferrer"
+                            className="font-semibold text-gray-900 hover:text-blue-700 hover:underline"
+                            aria-label={`${storeData.store.name}の詳細を見る`}
                         >
                             {storeData.store.name}
                         </a>
@@ -226,8 +225,8 @@ const HoursTable: React.FC<HoursTableProps> = ({ stores, selectedDates }) => {
             </table>
         </div>
         
-        {/* Mobile Card View - Always visible */}
-        <div className="space-y-4">
+        {/* Mobile Card View */}
+        <div className="space-y-4 md:hidden">
             {stores.map((storeData) => (
             <div
                 key={storeData.store.id}
