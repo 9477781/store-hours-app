@@ -1,6 +1,7 @@
 
-import React from 'react';
-import { Region, Prefecture } from '../types';
+import React, { useState, useRef, useEffect } from 'react';
+import { Region, Prefecture, Day } from '../types';
+import { JAPANESE_HOLIDAYS_2025 } from '../constants';
 
 interface FilterControlsProps {
   regions: Region[];
@@ -15,6 +16,9 @@ interface FilterControlsProps {
   searchTerm: string;
   onSearchChange: (term: string) => void;
   onSearchSubmit: () => void;
+  availableDates: Day[];
+  selectedDates: string[];
+  onSelectDates: (dates: string[]) => void;
 }
 
 const FilterControls: React.FC<FilterControlsProps> = ({
@@ -30,15 +34,48 @@ const FilterControls: React.FC<FilterControlsProps> = ({
   searchTerm,
   onSearchChange,
   onSearchSubmit,
+  availableDates,
+  selectedDates,
+  onSelectDates,
 }) => {
   const currentPrefectures = prefecturesByRegion[selectedRegion.id] || [];
+  const [isDateDropdownOpen, setIsDateDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const getDayHeaderColor = (dateStr: string) => {
+    const date = new Date(dateStr + 'T00:00:00');
+    const dayOfWeek = date.getDay();
+    const isHoliday = JAPANESE_HOLIDAYS_2025.includes(dateStr);
+    if (isHoliday || dayOfWeek === 0) return 'text-red-600'; // Holiday or Sunday
+    if (dayOfWeek === 6) return 'text-blue-600'; // Saturday
+    return 'text-gray-800'; // Weekday
+  };
+
+  const handleDateCheckboxChange = (date: string) => {
+    const newSelectedDates = selectedDates.includes(date)
+      ? selectedDates.filter((d) => d !== date)
+      : [...selectedDates, date];
+    onSelectDates(newSelectedDates);
+  };
+  
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDateDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [dropdownRef]);
 
   return (
     <div className="bg-white p-6 rounded-lg shadow space-y-8">
       <div className="flex flex-col md:flex-row md:items-center gap-6">
         {/* Keyword Search */}
         <form
-          className="flex w-full max-w-lg"
+          className="flex flex-grow"
           onSubmit={(e) => {
             e.preventDefault();
             onSearchSubmit();
@@ -62,6 +99,60 @@ const FilterControls: React.FC<FilterControlsProps> = ({
             検索
           </button>
         </form>
+        {/* Date Filter Dropdown */}
+        <div className="relative" ref={dropdownRef}>
+            <button
+                type="button"
+                onClick={() => setIsDateDropdownOpen(!isDateDropdownOpen)}
+                className="flex items-center justify-between w-full md:w-64 px-4 py-3 text-base text-left bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+                <span className="truncate">
+                    {selectedDates.length > 0 ? `${selectedDates.length}件の日付を選択中` : '日付で絞り込み'}
+                </span>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+            </button>
+            {isDateDropdownOpen && (
+                <div className="absolute right-0 mt-2 w-64 bg-white border border-gray-200 rounded-md shadow-lg z-40 max-h-80 overflow-y-auto">
+                    <ul className="py-1">
+                        {availableDates.map(day => {
+                            const date = new Date(day.date + 'T00:00:00');
+                            const month = date.getMonth() + 1;
+                            const dateNum = date.getDate();
+                            const displayDate = `${month}/${dateNum}(${day.weekday})`;
+                            const isSelected = selectedDates.includes(day.date);
+
+                            return (
+                                <li key={day.date}>
+                                    <label className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={isSelected}
+                                            onChange={() => handleDateCheckboxChange(day.date)}
+                                            className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                        />
+                                        <span className={`ml-3 font-semibold ${getDayHeaderColor(day.date)}`}>
+                                            {displayDate}
+                                        </span>
+                                    </label>
+                                </li>
+                            );
+                        })}
+                    </ul>
+                    {selectedDates.length > 0 && (
+                      <div className="p-2 border-t border-gray-200">
+                        <button 
+                          onClick={() => onSelectDates([])}
+                          className="w-full text-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded"
+                        >
+                          選択をクリア
+                        </button>
+                      </div>
+                    )}
+                </div>
+            )}
+        </div>
       </div>
 
       <div>

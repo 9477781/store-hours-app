@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { StoreHoursResponse, Region, Prefecture } from './types';
+import { StoreHoursResponse, Region, Prefecture, Day } from './types';
 import { fetchStoreHours } from './services/api';
 import { REGIONS, PREFECTURES } from './constants';
 import Header from './components/Header';
@@ -24,6 +24,7 @@ const App: React.FC = () => {
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
   const [inputTerm, setInputTerm] = useState<string>('');
   const [appliedTerm, setAppliedTerm] = useState<string>('');
+  const [selectedDates, setSelectedDates] = useState<string[]>([]);
 
   const fetchAndSetData = useCallback(async (isBackgroundRefresh = false) => {
     if (!isBackgroundRefresh) {
@@ -96,6 +97,17 @@ const App: React.FC = () => {
   const handleSearchSubmit = () => {
     setAppliedTerm(inputTerm);
   };
+
+  const handleSelectDates = (dates: string[]) => {
+    setSelectedDates(dates);
+  };
+
+  const availableDates = useMemo(() => {
+    if (!allStores || allStores.length === 0) {
+      return [];
+    }
+    return allStores[0].days.slice(0, 7);
+  }, [allStores]);
 
   const filteredStores = useMemo(() => {
     const searchKeywords = toHalfWidth(appliedTerm)
@@ -177,6 +189,9 @@ const App: React.FC = () => {
           searchTerm={inputTerm}
           onSearchChange={handleSearchInputChange}
           onSearchSubmit={handleSearchSubmit}
+          availableDates={availableDates}
+          selectedDates={selectedDates}
+          onSelectDates={handleSelectDates}
         />
         <div className="mt-8">
           <p className="text-sm text-gray-600 text-center mb-4">
@@ -192,7 +207,7 @@ const App: React.FC = () => {
               <p className="text-sm mt-1">{error}</p>
             </div>
           ) : (
-            <HoursTable stores={filteredStores} />
+            <HoursTable stores={filteredStores} selectedDates={selectedDates} />
           )}
         </div>
       </main>

@@ -1,9 +1,11 @@
+
 import React, { useMemo } from 'react';
 import { StoreHoursResponse, Day } from '../types';
 import { JAPANESE_HOLIDAYS_2025 } from '../constants';
 
 interface HoursTableProps {
   stores: StoreHoursResponse[];
+  selectedDates: string[];
 }
 
 interface HeaderInfo {
@@ -72,15 +74,18 @@ const renderDayStatus = (day: Day | undefined) => {
     );
 }
 
-const HoursTable: React.FC<HoursTableProps> = ({ stores }) => {
+const HoursTable: React.FC<HoursTableProps> = ({ stores, selectedDates }) => {
   const headers = useMemo((): HeaderInfo[] => {
     if (!stores || stores.length === 0) {
       return [];
     }
-    // FIX: Limit the display to 7 days as requested by the user.
     const referenceDays = stores[0].days.slice(0, 7);
 
-    return referenceDays.map(day => {
+    const daysToDisplay = selectedDates.length > 0
+        ? referenceDays.filter(day => selectedDates.includes(day.date))
+        : referenceDays;
+
+    return daysToDisplay.map(day => {
         // Use T00:00:00 to treat the date string as local time and avoid timezone shifts
         const currentDate = new Date(day.date + 'T00:00:00');
         const dayOfWeekIndex = currentDate.getDay();
@@ -95,7 +100,7 @@ const HoursTable: React.FC<HoursTableProps> = ({ stores }) => {
             isHoliday: JAPANESE_HOLIDAYS_2025.includes(day.date),
         };
     });
-  }, [stores]);
+  }, [stores, selectedDates]);
 
   const getDayHeaderBgColor = (day: number, isHoliday: boolean) => {
     if (isHoliday || day === 0) return 'bg-red-500'; // Holiday or Sunday
@@ -162,7 +167,7 @@ const HoursTable: React.FC<HoursTableProps> = ({ stores }) => {
   return (
     <>
         {/* Desktop Table View */}
-        <div className="overflow-x-auto overflow-y-auto max-h-[75vh] bg-white rounded-lg shadow">
+        <div className="hidden lg:block overflow-x-auto overflow-y-auto max-h-[75vh] bg-white rounded-lg shadow">
             <table className="min-w-full divide-y divide-gray-200 border-collapse">
                 <thead className="text-xs font-bold text-white uppercase sticky top-0 z-30">
                 <tr>
@@ -222,7 +227,7 @@ const HoursTable: React.FC<HoursTableProps> = ({ stores }) => {
         </div>
         
         {/* Mobile Card View */}
-        <div className="space-y-4 hidden">
+        <div className="space-y-4 lg:hidden">
             {stores.map((storeData) => (
             <div
                 key={storeData.store.id}
