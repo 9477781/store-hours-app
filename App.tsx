@@ -222,11 +222,13 @@ const App: React.FC = () => {
           onSelectDates={handleSelectDates}
         />
         <div className="mt-8">
-          <p className="md:hidden text-sm text-gray-600 text-center mb-4">
-            「店名」をクリックすると、公式サイトの店舗詳細ページに移動します。
+          <p className="md:hidden text-sm text-gray-600 text-left mb-4">
+            「店名」をクリックすると、公式サイトの店舗詳細ページに移動します。<br />
+            貸切営業やイベント営業等により通常営業時間と異なる場合がございます。
           </p>
           <p className="hidden md:block text-sm text-gray-600 text-center mb-4">
-            「店名」をクリックすると、公式サイトの店舗詳細ページに移動します。
+            「店名」をクリックすると、公式サイトの店舗詳細ページに移動します。<br />
+            貸切営業やイベント営業等により通常営業時間と異なる場合がございます。
           </p>
           {isLoading ? (
             <div className="text-center py-10 bg-white rounded-lg shadow">
