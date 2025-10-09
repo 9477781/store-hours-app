@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { StoreHoursResponse, Region, Prefecture, Day } from './types';
 import { fetchStoreHours } from './services/api';
@@ -212,10 +211,10 @@ const App: React.FC = () => {
           onSelectDates={handleSelectDates}
         />
         <div className="mt-8">
-          <p className="text-sm text-gray-600 text-center mb-4 md:hidden">
-            「店舗詳細へ」をクリックすると、公式サイトの店舗詳細ページに移動します。
+          <p className="md:hidden text-sm text-gray-600 text-center mb-4">
+            「店名」をクリックすると、公式サイトの店舗詳細ページに移動します。
           </p>
-          <p className="text-sm text-gray-600 text-center mb-4 hidden md:block">
+          <p className="hidden md:block text-sm text-gray-600 text-center mb-4">
             「店名」をクリックすると、公式サイトの店舗詳細ページに移動します。
           </p>
           {isLoading ? (

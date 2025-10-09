@@ -1,4 +1,3 @@
-
 import React, { useMemo } from 'react';
 import { StoreHoursResponse, Day } from '../types';
 import { JAPANESE_HOLIDAYS_2025 } from '../constants';
@@ -169,7 +168,7 @@ const HoursTable: React.FC<HoursTableProps> = ({ stores, selectedDates, focusedS
   return (
     <>
         {/* Desktop Table View */}
-        <div className="hidden md:block overflow-x-auto">
+        <div className="hidden md:block overflow-x-auto shadow rounded-lg">
             <table className="min-w-full divide-y divide-gray-200 border-collapse">
                 <thead className="text-xs font-bold text-white uppercase sticky top-0 z-30">
                 <tr>
@@ -232,34 +231,26 @@ const HoursTable: React.FC<HoursTableProps> = ({ stores, selectedDates, focusedS
         </div>
         
         {/* Mobile Card View */}
-        <div className="space-y-4 md:hidden">
+        <div className="md:hidden space-y-4">
             {stores.map((storeData) => (
             <div
                 key={storeData.store.id}
                 className="bg-white rounded-lg shadow p-4"
             >
                 {/* Card Header */}
-                <div className="border-b border-gray-200 pb-3 mb-3">
-                    <div className="flex justify-between items-center gap-2">
-                        <div className="min-w-0">
-                            <h3 className="font-normal truncate">
-                                <span className="text-xs text-gray-500 mr-2">{storeData.store.prefecture}</span>
-                                <span className="text-base font-bold text-gray-900">{storeData.store.name}</span>
-                            </h3>
-                        </div>
+                <div className="border-b border-gray-200 pb-3 mb-3 text-center">
+                    <h3 className="text-base font-bold text-gray-900 truncate">
                         <a
                             href={storeData.store.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center justify-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-slate-800 hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 flex-shrink-0"
+                            className="hover:text-blue-700 hover:underline"
                             aria-label={`${storeData.store.name}の詳細を見る`}
                         >
-                            店舗詳細へ
-                            <svg xmlns="http://www.w3.org/2000/svg" className="ml-1.5 h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002 2v-4M14 4h6m0 0v6m0-6L10 14" />
-                            </svg>
+                            {storeData.store.name}
                         </a>
-                    </div>
+                    </h3>
+                    <p className="text-xs text-gray-500 mt-1">{storeData.store.prefecture}</p>
                 </div>
                 
                 {/* Card Body - Hours */}
