@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { StoreHoursResponse, Region, Prefecture, Day } from './types';
 import { fetchStoreHours } from './services/api';
@@ -64,7 +65,12 @@ const App: React.FC = () => {
   };
 
   const handleSelectPrefecture = (prefecture: Prefecture | null) => {
-    setSelectedPrefecture(prefecture);
+    // If the clicked prefecture is already selected, deselect it.
+    if (prefecture && selectedPrefecture?.id === prefecture.id) {
+      setSelectedPrefecture(null);
+    } else {
+      setSelectedPrefecture(prefecture);
+    }
     setSelectedCity(null); // Reset city when prefecture changes
     setFocusedStoreId(null);
   };
@@ -93,7 +99,12 @@ const App: React.FC = () => {
   }, [allStores, selectedPrefecture]);
 
   const handleSelectCity = (city: string | null) => {
-    setSelectedCity(city);
+    // If the clicked city is already selected, deselect it.
+    if (city && selectedCity === city) {
+      setSelectedCity(null);
+    } else {
+      setSelectedCity(city);
+    }
     setFocusedStoreId(null);
   };
 
