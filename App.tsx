@@ -195,7 +195,7 @@ const App: React.FC = () => {
         />
         <div className="mt-8">
           <p className="text-sm text-gray-600 text-center mb-4">
-            店舗名をクリックすると、公式サイトの店舗詳細ページに移動します。
+            「店舗詳細へ」をクリックすると、公式サイトの店舗詳細ページに移動します。
           </p>
           {isLoading ? (
             <div className="text-center py-10 bg-white rounded-lg shadow">
