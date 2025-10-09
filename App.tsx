@@ -25,6 +25,7 @@ const App: React.FC = () => {
   const [inputTerm, setInputTerm] = useState<string>('');
   const [appliedTerm, setAppliedTerm] = useState<string>('');
   const [selectedDates, setSelectedDates] = useState<string[]>([]);
+  const [focusedStoreId, setFocusedStoreId] = useState<string | null>(null);
 
   const fetchAndSetData = useCallback(async (isBackgroundRefresh = false) => {
     if (!isBackgroundRefresh) {
@@ -52,15 +53,21 @@ const App: React.FC = () => {
     return () => clearInterval(intervalId); // Cleanup interval on component unmount
   }, [fetchAndSetData]);
 
+  const handleStoreClick = useCallback((storeId: string) => {
+    setFocusedStoreId(prevId => (prevId === storeId ? null : storeId));
+  }, []);
+
   const handleSelectRegion = (region: Region) => {
     setSelectedRegion(region);
     setSelectedPrefecture(null); // Reset prefecture when region changes
     setSelectedCity(null); // Reset city as well
+    setFocusedStoreId(null);
   };
 
   const handleSelectPrefecture = (prefecture: Prefecture | null) => {
     setSelectedPrefecture(prefecture);
     setSelectedCity(null); // Reset city when prefecture changes
+    setFocusedStoreId(null);
   };
 
   const citiesForPrefecture = useMemo(() => {
@@ -88,6 +95,7 @@ const App: React.FC = () => {
 
   const handleSelectCity = (city: string | null) => {
     setSelectedCity(city);
+    setFocusedStoreId(null);
   };
 
   const handleSearchInputChange = (term: string) => {
@@ -96,10 +104,12 @@ const App: React.FC = () => {
 
   const handleSearchSubmit = () => {
     setAppliedTerm(inputTerm);
+    setFocusedStoreId(null);
   };
 
   const handleSelectDates = (dates: string[]) => {
     setSelectedDates(dates);
+    setFocusedStoreId(null);
   };
 
   const availableDates = useMemo(() => {
@@ -161,6 +171,14 @@ const App: React.FC = () => {
     });
 
   }, [allStores, selectedRegion, selectedPrefecture, selectedCity, appliedTerm]);
+  
+  const storesToDisplay = useMemo(() => {
+    if (focusedStoreId) {
+        const focusedStore = allStores.find(s => s.store.id === focusedStoreId);
+        return focusedStore ? [focusedStore] : [];
+    }
+    return filteredStores;
+  }, [focusedStoreId, allStores, filteredStores]);
 
   const lastUpdated = useMemo(() => {
     if (allStores.length > 0) {
@@ -194,8 +212,11 @@ const App: React.FC = () => {
           onSelectDates={handleSelectDates}
         />
         <div className="mt-8">
-          <p className="text-sm text-gray-600 text-center mb-4">
+          <p className="text-sm text-gray-600 text-center mb-4 md:hidden">
             「店舗詳細へ」をクリックすると、公式サイトの店舗詳細ページに移動します。
+          </p>
+          <p className="text-sm text-gray-600 text-center mb-4 hidden md:block">
+            「店名」をクリックすると、公式サイトの店舗詳細ページに移動します。
           </p>
           {isLoading ? (
             <div className="text-center py-10 bg-white rounded-lg shadow">
@@ -207,7 +228,7 @@ const App: React.FC = () => {
               <p className="text-sm mt-1">{error}</p>
             </div>
           ) : (
-            <HoursTable stores={filteredStores} selectedDates={selectedDates} />
+            <HoursTable stores={storesToDisplay} selectedDates={selectedDates} focusedStoreId={focusedStoreId} onStoreClick={handleStoreClick}/>
           )}
         </div>
       </main>
