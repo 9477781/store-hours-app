@@ -169,7 +169,7 @@ const HoursTable: React.FC<HoursTableProps> = ({ stores, selectedDates, focusedS
     <>
         {/* Desktop Table View */}
         <div className="hidden md:block overflow-auto shadow rounded-lg max-h-[70vh]">
-            <table className="min-w-full divide-y divide-gray-200 border-collapse">
+            <table className="min-w-full divide-y divide-gray-200 border-collapse table-fixed">
                 <thead className="text-xs font-bold text-white uppercase sticky top-0 z-30">
                 <tr>
                     <th scope="col" rowSpan={2} className="md:sticky md:left-0 bg-orange-500 px-4 py-3 text-center tracking-wider z-20 w-32 align-middle">
