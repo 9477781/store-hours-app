@@ -16,9 +16,14 @@ interface FilterControlsProps {
   searchTerm: string;
   onSearchChange: (term: string) => void;
   onSearchSubmit: () => void;
+  isFiltered: boolean;
+  onResetFilters: () => void;
   availableDates: Day[];
   selectedDates: string[];
   onSelectDates: (dates: string[]) => void;
+  storeNames: string[];
+  selectedStore: string | null;
+  onSelectStore: (storeName: string | null) => void;
 }
 
 const FilterControls: React.FC<FilterControlsProps> = ({
@@ -34,9 +39,14 @@ const FilterControls: React.FC<FilterControlsProps> = ({
   searchTerm,
   onSearchChange,
   onSearchSubmit,
+  isFiltered,
+  onResetFilters,
   availableDates,
   selectedDates,
   onSelectDates,
+  storeNames,
+  selectedStore,
+  onSelectStore,
 }) => {
   const currentPrefectures = prefecturesByRegion[selectedRegion.id] || [];
   const [isDateDropdownOpen, setIsDateDropdownOpen] = useState(false);
@@ -72,42 +82,77 @@ const FilterControls: React.FC<FilterControlsProps> = ({
 
   return (
     <div className="bg-white p-6 rounded-lg shadow space-y-8">
-      <div className="flex flex-col md:flex-row md:items-center gap-6">
+      <div className="flex flex-col md:flex-row md:items-center gap-4">
         {/* Keyword Search */}
-        <form
-          className="flex flex-grow"
-          onSubmit={(e) => {
-            e.preventDefault();
-            onSearchSubmit();
-          }}
-        >
-          <label htmlFor="keyword-search" className="sr-only">キーワード検索</label>
-          <input
-            id="keyword-search"
-            type="search"
-            value={searchTerm}
-            onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="HUB 新宿"
-            className="flex-grow w-full border border-gray-300 rounded-l-md px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base"
-            aria-label="キーワードから探す"
-          />
-          <button
-            type="submit"
-            className="bg-slate-800 text-white px-8 py-3 rounded-r-md font-semibold hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-colors text-base"
-            aria-label="検索"
-          >
-            検索
-          </button>
-        </form>
+        <div className="flex flex-grow items-center">
+            <form
+            className="flex flex-grow"
+            onSubmit={(e) => {
+                e.preventDefault();
+                onSearchSubmit();
+            }}
+            >
+            <label htmlFor="keyword-search" className="sr-only">キーワード検索</label>
+            <input
+                id="keyword-search"
+                type="search"
+                value={searchTerm}
+                onChange={(e) => onSearchChange(e.target.value)}
+                placeholder="HUB 新宿"
+                className="flex-grow w-full border border-gray-300 rounded-l-md px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base"
+                aria-label="キーワードから探す"
+            />
+            <button
+                type="submit"
+                className="bg-slate-800 text-white px-8 py-3 rounded-r-md font-semibold hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-colors text-base"
+                aria-label="検索"
+            >
+                検索
+            </button>
+            </form>
+            {isFiltered && (
+                <button
+                    type="button"
+                    onClick={onResetFilters}
+                    className="bg-gray-200 text-gray-700 px-6 py-3 rounded-md font-semibold hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 transition-colors text-base ml-2 whitespace-nowrap"
+                    aria-label="検索条件をリセット"
+                >
+                    リセット
+                </button>
+            )}
+        </div>
+        {/* Store Name Dropdown */}
+        <div className="relative flex-shrink-0">
+            <label htmlFor="store-select" className="sr-only">店名で絞り込み</label>
+            <select
+                id="store-select"
+                value={selectedStore || ''}
+                onChange={(e) => onSelectStore(e.target.value === '' ? null : e.target.value)}
+                className="appearance-none w-full md:w-52 px-4 py-3 text-base text-left bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                aria-label="店名で絞り込み"
+            >
+                <option value="">店名で絞り込み</option>
+                {storeNames.map((name) => (
+                    <option key={name} value={name}>
+                        {name}
+                    </option>
+                ))}
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+            </div>
+        </div>
         {/* Date Filter Dropdown */}
-        <div className="relative" ref={dropdownRef}>
+        <div className="relative flex-shrink-0" ref={dropdownRef}>
             <button
                 type="button"
                 onClick={() => setIsDateDropdownOpen(!isDateDropdownOpen)}
-                className="flex items-center justify-between w-full md:w-64 px-4 py-3 text-base text-left bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex items-center justify-between w-full md:w-52 px-4 py-3 text-base text-left bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
                 <span className="truncate">
-                    {selectedDates.length > 0 ? `${selectedDates.length}件の日付を選択中` : '日付で絞り込み'}
+                    {selectedDates.length > 0 ? `${selectedDates.length}件の日付を選択` : '日付で絞り込み'}
                 </span>
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />

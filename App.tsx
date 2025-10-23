@@ -25,6 +25,7 @@ const App: React.FC = () => {
   const [inputTerm, setInputTerm] = useState<string>('');
   const [appliedTerm, setAppliedTerm] = useState<string>('');
   const [selectedDates, setSelectedDates] = useState<string[]>([]);
+  const [selectedStore, setSelectedStore] = useState<string | null>(null);
   const [focusedStoreId, setFocusedStoreId] = useState<string | null>(null);
 
   const fetchAndSetData = useCallback(async (isBackgroundRefresh = false) => {
@@ -61,6 +62,7 @@ const App: React.FC = () => {
     setSelectedRegion(region);
     setSelectedPrefecture(null); // Reset prefecture when region changes
     setSelectedCity(null); // Reset city as well
+    setSelectedStore(null); // Reset store selection
     setFocusedStoreId(null);
   };
 
@@ -72,6 +74,7 @@ const App: React.FC = () => {
       setSelectedPrefecture(prefecture);
     }
     setSelectedCity(null); // Reset city when prefecture changes
+    setSelectedStore(null); // Reset store selection
     setFocusedStoreId(null);
   };
 
@@ -105,6 +108,7 @@ const App: React.FC = () => {
     } else {
       setSelectedCity(city);
     }
+    setSelectedStore(null); // Reset store selection
     setFocusedStoreId(null);
   };
 
@@ -122,6 +126,34 @@ const App: React.FC = () => {
     setFocusedStoreId(null);
   };
 
+  const handleSelectStore = (storeName: string | null) => {
+    setSelectedStore(storeName);
+    setFocusedStoreId(null);
+  };
+
+  const isFiltered = useMemo(() => {
+    return (
+      inputTerm !== '' ||
+      appliedTerm !== '' ||
+      selectedRegion.id !== REGIONS[0].id ||
+      selectedPrefecture !== null ||
+      selectedCity !== null ||
+      selectedDates.length > 0 ||
+      selectedStore !== null
+    );
+  }, [inputTerm, appliedTerm, selectedRegion, selectedPrefecture, selectedCity, selectedDates, selectedStore]);
+
+  const handleResetFilters = useCallback(() => {
+    setInputTerm('');
+    setAppliedTerm('');
+    setSelectedRegion(REGIONS[0]);
+    setSelectedPrefecture(null);
+    setSelectedCity(null);
+    setSelectedDates([]);
+    setSelectedStore(null);
+    setFocusedStoreId(null);
+  }, []);
+
   const availableDates = useMemo(() => {
     if (!allStores || allStores.length === 0) {
       return [];
@@ -129,12 +161,7 @@ const App: React.FC = () => {
     return allStores[0].days.slice(0, 7);
   }, [allStores]);
 
-  const filteredStores = useMemo(() => {
-    const searchKeywords = toHalfWidth(appliedTerm)
-      .toLowerCase()
-      .split(/\s+/)
-      .filter(Boolean);
-
+  const storesFilteredByLocation = useMemo(() => {
     const filtered = allStores.filter(storeData => {
       const { store } = storeData;
       
@@ -144,10 +171,7 @@ const App: React.FC = () => {
       
       const cityMatch = !selectedCity || store.prefecture === `${selectedPrefecture?.name} ${selectedCity}`;
       
-      const combinedStoreInfo = toHalfWidth(`${store.name} ${store.prefecture}`).toLowerCase();
-      const searchTermMatch = searchKeywords.every(keyword => combinedStoreInfo.includes(keyword));
-
-      return regionMatch && prefectureMatch && cityMatch && searchTermMatch;
+      return regionMatch && prefectureMatch && cityMatch;
     });
     
     // Custom sorting logic based on user's request
@@ -180,7 +204,29 @@ const App: React.FC = () => {
         return a.store.name.localeCompare(b.store.name, 'ja');
     });
 
-  }, [allStores, selectedRegion, selectedPrefecture, selectedCity, appliedTerm]);
+  }, [allStores, selectedRegion, selectedPrefecture, selectedCity]);
+
+  const storeNamesForDropdown = useMemo(() => {
+    return storesFilteredByLocation.map(s => s.store.name);
+  }, [storesFilteredByLocation]);
+
+  const filteredStores = useMemo(() => {
+    const searchKeywords = toHalfWidth(appliedTerm)
+      .toLowerCase()
+      .split(/\s+/)
+      .filter(Boolean);
+
+    return storesFilteredByLocation.filter(storeData => {
+      const { store } = storeData;
+      
+      const combinedStoreInfo = toHalfWidth(`${store.name} ${store.prefecture}`).toLowerCase();
+      const searchTermMatch = searchKeywords.every(keyword => combinedStoreInfo.includes(keyword));
+
+      const storeNameMatch = !selectedStore || store.name === selectedStore;
+
+      return searchTermMatch && storeNameMatch;
+    });
+  }, [storesFilteredByLocation, appliedTerm, selectedStore]);
   
   const storesToDisplay = useMemo(() => {
     if (focusedStoreId) {
@@ -229,18 +275,23 @@ const App: React.FC = () => {
           searchTerm={inputTerm}
           onSearchChange={handleSearchInputChange}
           onSearchSubmit={handleSearchSubmit}
+          isFiltered={isFiltered}
+          onResetFilters={handleResetFilters}
           availableDates={availableDates}
           selectedDates={selectedDates}
           onSelectDates={handleSelectDates}
+          storeNames={storeNamesForDropdown}
+          selectedStore={selectedStore}
+          onSelectStore={handleSelectStore}
         />
         <div className="mt-8">
           <p className="md:hidden text-sm text-gray-600 text-left mb-4">
             「店名」をクリックすると、公式サイトの店舗詳細ページに移動します。<br />
-            貸切営業やイベント営業等により通常営業時間と異なる場合がございます。
+            貸切営業やイベント営業、スポーツ放映等により通常営業時間と異なる場合がございます。
           </p>
           <p className="hidden md:block text-sm text-gray-600 text-center mb-4">
             「店名」をクリックすると、公式サイトの店舗詳細ページに移動します。<br />
-            貸切営業やイベント営業等により通常営業時間と異なる場合がございます。
+            貸切営業やイベント営業、スポーツ放映等により通常営業時間と異なる場合がございます。
           </p>
           {isLoading ? (
             <div className="text-center py-10 bg-white rounded-lg shadow">
