@@ -118,6 +118,7 @@ const App: React.FC = () => {
 
   const handleSearchSubmit = () => {
     setAppliedTerm(inputTerm);
+    setSelectedStore(null);
     setFocusedStoreId(null);
   };
 
@@ -206,27 +207,44 @@ const App: React.FC = () => {
 
   }, [allStores, selectedRegion, selectedPrefecture, selectedCity]);
 
-  const storeNamesForDropdown = useMemo(() => {
-    return storesFilteredByLocation.map(s => s.store.name);
-  }, [storesFilteredByLocation]);
-
-  const filteredStores = useMemo(() => {
+  const storesFilteredByKeyword = useMemo(() => {
     const searchKeywords = toHalfWidth(appliedTerm)
       .toLowerCase()
       .split(/\s+/)
       .filter(Boolean);
 
+    if (searchKeywords.length === 0) {
+        return storesFilteredByLocation;
+    }
+
     return storesFilteredByLocation.filter(storeData => {
       const { store } = storeData;
-      
       const combinedStoreInfo = toHalfWidth(`${store.name} ${store.prefecture}`).toLowerCase();
-      const searchTermMatch = searchKeywords.every(keyword => combinedStoreInfo.includes(keyword));
-
-      const storeNameMatch = !selectedStore || store.name === selectedStore;
-
-      return searchTermMatch && storeNameMatch;
+      return searchKeywords.every(keyword => combinedStoreInfo.includes(keyword));
     });
-  }, [storesFilteredByLocation, appliedTerm, selectedStore]);
+  }, [storesFilteredByLocation, appliedTerm]);
+
+  const storeNamesForDropdown = useMemo(() => {
+    return storesFilteredByKeyword.map(s => s.store.name);
+  }, [storesFilteredByKeyword]);
+  
+  useEffect(() => {
+    // If a keyword search results in a single store, automatically select it in the dropdown.
+    if (appliedTerm && storesFilteredByKeyword.length === 1) {
+      const uniqueStoreName = storesFilteredByKeyword[0].store.name;
+      if (selectedStore !== uniqueStoreName) {
+        setSelectedStore(uniqueStoreName);
+      }
+    }
+  }, [appliedTerm, storesFilteredByKeyword, selectedStore]);
+
+
+  const filteredStores = useMemo(() => {
+    if (!selectedStore) {
+        return storesFilteredByKeyword;
+    }
+    return storesFilteredByKeyword.filter(storeData => storeData.store.name === selectedStore);
+  }, [storesFilteredByKeyword, selectedStore]);
   
   const storesToDisplay = useMemo(() => {
     if (focusedStoreId) {
