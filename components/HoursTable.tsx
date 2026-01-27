@@ -7,6 +7,7 @@ interface HoursTableProps {
   selectedDates: string[];
   focusedStoreId?: string | null;
   onStoreClick?: (storeId: string) => void;
+  language: 'ja' | 'en';
 }
 
 interface HeaderInfo {
@@ -48,15 +49,15 @@ const isNonStandardTime = (time?: string): boolean => {
   return /[^0-9:]/.test(time);
 };
 
-const renderDayStatus = (day: Day | undefined) => {
+const renderDayStatus = (day: Day | undefined, language: 'ja' | 'en') => {
     if (!day || day.status !== 'open' || !day.hours || day.hours.length === 0) {
       let content = 'ー';
       let className = 'text-gray-400';
       if (day?.status === 'holiday') {
-        content = '休 業';
+        content = language === 'ja' ? '休 業' : 'Closed';
         className = 'font-medium text-red-500';
       } else if (day?.status === 'error') {
-        content = '確認中';
+        content = language === 'ja' ? '確認中' : 'Checking';
         className = 'font-semibold text-orange-500';
       }
       return <div className={className}>{content}</div>;
@@ -75,7 +76,7 @@ const renderDayStatus = (day: Day | undefined) => {
     );
 }
 
-const HoursTable: React.FC<HoursTableProps> = ({ stores, selectedDates, focusedStoreId, onStoreClick }) => {
+const HoursTable: React.FC<HoursTableProps> = ({ stores, selectedDates, focusedStoreId, onStoreClick, language }) => {
   const headers = useMemo((): HeaderInfo[] => {
     if (!stores || stores.length === 0) {
       return [];
@@ -109,15 +110,15 @@ const HoursTable: React.FC<HoursTableProps> = ({ stores, selectedDates, focusedS
     return 'bg-orange-500'; // Weekday
   };
 
-  const renderDayCells = (day: Day | undefined) => {
+  const renderDayCells = (day: Day | undefined, language: 'ja' | 'en') => {
     if (!day || day.status !== 'open' || !day.hours || day.hours.length === 0) {
       let content = 'ー';
       let className = 'text-gray-400';
       if (day?.status === 'holiday') {
-        content = '休 業';
+        content = language === 'ja' ? '休 業' : 'Closed';
         className = 'text-base font-medium text-red-500';
       } else if (day?.status === 'error') {
-        content = '確認中';
+        content = language === 'ja' ? '確認中' : 'Checking';
         className = 'font-semibold text-orange-500';
       }
       return (
@@ -160,7 +161,9 @@ const HoursTable: React.FC<HoursTableProps> = ({ stores, selectedDates, focusedS
   if (stores.length === 0) {
     return (
         <div className="text-center py-10 bg-white rounded-lg shadow">
-            <p className="text-lg text-gray-500">該当する店舗がありません。</p>
+            <p className="text-lg text-gray-500">
+              {language === 'ja' ? '該当する店舗がありません。' : 'No stores found.'}
+            </p>
         </div>
     );
   }
@@ -173,14 +176,14 @@ const HoursTable: React.FC<HoursTableProps> = ({ stores, selectedDates, focusedS
                 <thead className="text-xs font-bold text-white uppercase sticky top-0 z-30">
                 <tr>
                     <th scope="col" rowSpan={2} className="md:sticky md:left-0 bg-orange-500 px-4 py-3 text-center tracking-wider z-20 w-32 align-middle">
-                    エリア
+                      {language === 'ja' ? 'エリア' : 'Area'}
                     </th>
                     <th scope="col" rowSpan={2} className="md:sticky md:left-32 bg-orange-500 px-4 py-3 text-left tracking-wider z-20 w-52 align-middle border-l border-white/20">
-                    店名
+                      {language === 'ja' ? '店名' : 'Shop'}
                     </th>
                     {headers.map((header) => (
                     <th key={header.fullDate} scope="col" colSpan={2} className={`py-1 text-center tracking-wider border-l border-white/20 ${getDayHeaderBgColor(header.day, header.isHoliday)}`}>
-                        {header.monthDay}({header.weekday})
+                        {header.monthDay}({language === 'ja' ? header.weekday : (stores[0].days.find(d => d.date === header.fullDate)?.weekday_en || header.weekday)})
                     </th>
                     ))}
                 </tr>
@@ -203,24 +206,24 @@ const HoursTable: React.FC<HoursTableProps> = ({ stores, selectedDates, focusedS
                         className={`${isFocused ? 'bg-white' : (index % 2 === 0 ? 'bg-white' : 'bg-gray-50')} hover:bg-orange-100 transition-colors duration-150 cursor-pointer`}
                     >
                     <td className="md:sticky md:left-0 px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-700 z-10 w-32 border-r text-center bg-inherit align-middle">
-                        {storeData.store.prefecture}
+                        {language === 'ja' ? storeData.store.prefecture : (storeData.store.prefecture_en || storeData.store.prefecture)}
                     </td>
-                    <td className="md:sticky md:left-32 px-4 py-4 whitespace-nowrap text-sm z-10 w-52 border-r bg-inherit align-middle">
+                    <td className="md:sticky md:left-32 px-4 py-4 text-sm z-10 w-56 border-r bg-inherit align-middle">
                         <a 
                             href={storeData.store.url} 
                             target="_blank" 
                             rel="noopener noreferrer"
-                            className="font-semibold text-gray-900 hover:text-blue-700 hover:underline"
-                            aria-label={`${storeData.store.name}の詳細を見る`}
+                            className="font-semibold text-gray-900 hover:text-blue-700 hover:underline leading-tight"
+                            aria-label={language === 'ja' ? `${storeData.store.name}の詳細を見る` : `View details for ${storeData.store.name_en || storeData.store.name}`}
                         >
-                            {storeData.store.name}
+                            {language === 'ja' ? storeData.store.name : (storeData.store.name_en || storeData.store.name)}
                         </a>
                     </td>
                     {headers.map((header) => {
                         const dayData = storeData.days.find(d => d.date.startsWith(header.fullDate));
                         return (
                             <React.Fragment key={`${storeData.store.id}-${header.fullDate}`}>
-                                {renderDayCells(dayData)}
+                                {renderDayCells(dayData, language)}
                             </React.Fragment>
                         )
                     })}
@@ -239,18 +242,20 @@ const HoursTable: React.FC<HoursTableProps> = ({ stores, selectedDates, focusedS
             >
                 {/* Card Header */}
                 <div className="border-b border-gray-200 pb-3 mb-3 text-center">
-                    <h3 className="text-base font-bold text-gray-900 truncate">
+                    <h3 className="text-base font-bold text-gray-900 leading-tight">
                         <a
                             href={storeData.store.url}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="hover:text-blue-700 hover:underline"
-                            aria-label={`${storeData.store.name}の詳細を見る`}
+                            aria-label={language === 'ja' ? `${storeData.store.name}の詳細を見る` : `View details for ${storeData.store.name_en || storeData.store.name}`}
                         >
-                            {storeData.store.name}
+                            {language === 'ja' ? storeData.store.name : (storeData.store.name_en || storeData.store.name)}
                         </a>
                     </h3>
-                    <p className="text-xs text-gray-500 mt-1">{storeData.store.prefecture}</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {language === 'ja' ? storeData.store.prefecture : (storeData.store.prefecture_en || storeData.store.prefecture)}
+                    </p>
                 </div>
                 
                 {/* Card Body - Hours */}
@@ -264,10 +269,10 @@ const HoursTable: React.FC<HoursTableProps> = ({ stores, selectedDates, focusedS
                     return (
                     <div key={header.fullDate} className="grid grid-cols-3 gap-2 items-start">
                         <dt className={`font-semibold ${dayColor}`}>
-                        {header.monthDay}({header.weekday})
+                        {header.monthDay}({language === 'ja' ? header.weekday : (dayData?.weekday_en || header.weekday)})
                         </dt>
                         <dd className="col-span-2">
-                        {renderDayStatus(dayData)}
+                        {renderDayStatus(dayData, language)}
                         </dd>
                     </div>
                     );

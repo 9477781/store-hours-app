@@ -27,6 +27,7 @@ const App: React.FC = () => {
   const [selectedDates, setSelectedDates] = useState<string[]>([]);
   const [selectedStore, setSelectedStore] = useState<string | null>(null);
   const [focusedStoreId, setFocusedStoreId] = useState<string | null>(null);
+  const [language, setLanguage] = useState<'ja' | 'en'>('ja');
 
   const fetchAndSetData = useCallback(async (isBackgroundRefresh = false) => {
     if (!isBackgroundRefresh) {
@@ -146,7 +147,8 @@ const App: React.FC = () => {
       selectedPrefecture !== null ||
       selectedCity !== null ||
       selectedDates.length > 0 ||
-      selectedStore !== null
+      selectedStore !== null ||
+      focusedStoreId !== null
     );
   }, [
     inputTerm,
@@ -156,6 +158,7 @@ const App: React.FC = () => {
     selectedCity,
     selectedDates,
     selectedStore,
+    focusedStoreId,
   ]);
 
   const handleResetFilters = useCallback(() => {
@@ -242,7 +245,7 @@ const App: React.FC = () => {
     return sortedAllStores.filter((storeData) => {
       const { store } = storeData;
       const combinedStoreInfo = toHalfWidth(
-        `${store.name} ${store.prefecture}`
+        `${store.name} ${store.name_en || ''} ${store.prefecture} ${store.prefecture_en || ''}`
       ).toLowerCase();
       return searchKeywords.every((keyword) =>
         combinedStoreInfo.includes(keyword)
@@ -293,9 +296,9 @@ const App: React.FC = () => {
 
   return (
     <div className="bg-gray-100 min-h-screen font-sans">
-      <Header lastUpdated={lastUpdated} />
+      <Header lastUpdated={lastUpdated} language={language} />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="text-center mb-6">
+        <div className="flex justify-center items-center gap-4 mb-6">
           <a
             href="https://www.pub-hub.com/"
             target="_top"
@@ -313,8 +316,17 @@ const App: React.FC = () => {
                 clipRule="evenodd"
               />
             </svg>
-            公式サイトTOPへ戻る
+            {language === 'ja' ? '公式サイトTOPへ戻る' : 'Back to Official Site'}
           </a>
+          <button
+            onClick={() => setLanguage(lang => lang === 'ja' ? 'en' : 'ja')}
+            className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-colors"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+            </svg>
+            {language === 'ja' ? 'English' : '日本語'}
+          </button>
         </div>
         <FilterControls
           regions={REGIONS}
@@ -337,26 +349,38 @@ const App: React.FC = () => {
           storeNames={storeNamesForDropdown}
           selectedStore={selectedStore}
           onSelectStore={handleSelectStore}
+          allStores={sortedAllStores}
+          language={language}
         />
         <div className="mt-8">
           <p className="md:hidden text-sm text-gray-600 text-left mb-4">
-            「店名」をクリックすると、公式サイトの店舗詳細ページに移動します。
+            {language === 'ja' ? '※ 左右にスワイプして全日程を確認できます。' : '* Swipe left or right to see all dates.'}
             <br />
-            貸切営業やイベント営業、スポーツ放映等により通常営業時間と異なる場合がございます。
+            {language === 'ja' ? '「店名」をクリックすると、公式サイトの店舗詳細ページに移動します。' : 'Click "Shop Name" to visit the official store page.'}
+            <br />
+            {language === 'ja' ? '貸切営業やイベント営業、スポーツ放映等により通常営業時間と異なる場合がございます。' : 'Hours may vary due to private events, ceremonies, or sports broadcasts.'}
           </p>
           <p className="hidden md:block text-sm text-gray-600 text-center mb-4">
-            「店名」をクリックすると、公式サイトの店舗詳細ページに移動します。
+            {language === 'ja' ? '「店名」をクリックすると、公式サイトの店舗詳細ページに移動します。' : 'Click "Shop Name" to visit the official store page.'}
             <br />
-            貸切営業やイベント営業、スポーツ放映等により通常営業時間と異なる場合がございます。
+            {language === 'ja' ? '貸切営業やイベント営業、スポーツ放映等により通常営業時間と異なる場合がございます。' : 'Hours may vary due to private events, ceremonies, or sports broadcasts.'}
           </p>
           {isLoading ? (
             <div className="text-center py-10 bg-white rounded-lg shadow">
-              <p className="text-lg text-gray-500">読み込み中...</p>
+              <p className="text-lg text-gray-500">
+                {language === 'ja' ? '読み込み中...' : 'Loading...'}
+              </p>
             </div>
           ) : error ? (
             <div className="text-center py-10 bg-white rounded-lg shadow text-red-600">
-              <p className="font-semibold">エラーが発生しました</p>
+              <p className="font-semibold">{language === 'ja' ? 'エラーが発生しました' : 'An error occurred'}</p>
               <p className="text-sm mt-1">{error}</p>
+              <button 
+                onClick={() => fetchAndSetData()}
+                className="mt-4 px-4 py-2 bg-slate-800 text-white rounded hover:bg-slate-700 transition-colors"
+              >
+                {language === 'ja' ? '再試行' : 'Retry'}
+              </button>
             </div>
           ) : (
             <HoursTable
@@ -364,6 +388,7 @@ const App: React.FC = () => {
               selectedDates={selectedDates}
               focusedStoreId={focusedStoreId}
               onStoreClick={handleStoreClick}
+              language={language}
             />
           )}
         </div>
@@ -372,5 +397,4 @@ const App: React.FC = () => {
   );
 };
 
-// FIX: Added default export to resolve module import error in index.tsx
 export default App;

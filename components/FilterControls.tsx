@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Region, Prefecture, Day } from '../types';
-import { JAPANESE_HOLIDAYS_2025 } from '../constants';
+import { Region, Prefecture, Day, StoreHoursResponse } from '../types';
+import { JAPANESE_HOLIDAYS_2025, CITY_TRANSLATIONS } from '../constants';
 
 interface FilterControlsProps {
   regions: Region[];
@@ -24,6 +24,8 @@ interface FilterControlsProps {
   storeNames: string[];
   selectedStore: string | null;
   onSelectStore: (storeName: string | null) => void;
+  allStores: StoreHoursResponse[];
+  language: 'ja' | 'en';
 }
 
 const FilterControls: React.FC<FilterControlsProps> = ({
@@ -47,6 +49,8 @@ const FilterControls: React.FC<FilterControlsProps> = ({
   storeNames,
   selectedStore,
   onSelectStore,
+  allStores,
+  language,
 }) => {
   const currentPrefectures = prefecturesByRegion[selectedRegion.id] || [];
   const [isDateDropdownOpen, setIsDateDropdownOpen] = useState(false);
@@ -92,51 +96,59 @@ const FilterControls: React.FC<FilterControlsProps> = ({
                 onSearchSubmit();
             }}
             >
-            <label htmlFor="keyword-search" className="sr-only">キーワード検索</label>
+            <label htmlFor="keyword-search" className="sr-only">
+              {language === 'ja' ? 'キーワード検索' : 'Keyword Search'}
+            </label>
             <input
                 id="keyword-search"
                 type="search"
                 value={searchTerm}
                 onChange={(e) => onSearchChange(e.target.value)}
-                placeholder="HUB 新宿"
+                placeholder={language === 'ja' ? "HUB 新宿" : "HUB Shinjuku"}
                 className="flex-grow w-full border border-gray-300 rounded-l-md px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base"
-                aria-label="キーワードから探す"
+                aria-label={language === 'ja' ? "キーワードから探す" : "Search by keyword"}
             />
             <button
                 type="submit"
                 className="bg-slate-800 text-white px-8 py-3 rounded-r-md font-semibold hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-colors text-base"
-                aria-label="検索"
+                aria-label={language === 'ja' ? "検索" : "Search"}
             >
-                検索
+                {language === 'ja' ? '検索' : 'Search'}
             </button>
             </form>
-            {isFiltered && (
+            {(isFiltered || selectedStore !== null) && (
                 <button
                     type="button"
                     onClick={onResetFilters}
                     className="bg-gray-200 text-gray-700 px-6 py-3 rounded-md font-semibold hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 transition-colors text-base ml-2 whitespace-nowrap"
-                    aria-label="検索条件をリセット"
+                    aria-label={language === 'ja' ? "検索条件をリセット" : "Reset filters"}
                 >
-                    リセット
+                    {language === 'ja' ? 'リセット' : 'Reset'}
                 </button>
             )}
         </div>
         {/* Store Name Dropdown */}
         <div className="relative flex-shrink-0">
-            <label htmlFor="store-select" className="sr-only">店名で絞り込み</label>
+            <label htmlFor="store-select" className="sr-only">
+              {language === 'ja' ? '店名で絞り込み' : 'Filter by store'}
+            </label>
             <select
                 id="store-select"
                 value={selectedStore || ''}
                 onChange={(e) => onSelectStore(e.target.value === '' ? null : e.target.value)}
                 className="appearance-none w-full md:w-52 px-4 py-3 text-base text-left bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                aria-label="店名で絞り込み"
+                aria-label={language === 'ja' ? "店名で絞り込み" : "Filter by store"}
             >
-                <option value="">店名で絞り込み</option>
-                {storeNames.map((name) => (
-                    <option key={name} value={name}>
-                        {name}
-                    </option>
-                ))}
+                <option value="">{language === 'ja' ? '店名で絞り込み' : 'Filter by store'}</option>
+                {storeNames.map((name) => {
+                    const storeData = allStores.find(s => s.store.name === name);
+                    const displayName = language === 'ja' ? name : (storeData?.store.name_en || name);
+                    return (
+                        <option key={name} value={name}>
+                            {displayName}
+                        </option>
+                    );
+                })}
             </select>
             <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
@@ -147,16 +159,30 @@ const FilterControls: React.FC<FilterControlsProps> = ({
         {/* Date Filter Dropdown */}
         <div className="relative flex-shrink-0" ref={dropdownRef}>
             <button
-                type="button"
-                onClick={() => setIsDateDropdownOpen(!isDateDropdownOpen)}
-                className="flex items-center justify-between w-full md:w-52 px-4 py-3 text-base text-left bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              type="button"
+              onClick={() => setIsDateDropdownOpen(!isDateDropdownOpen)}
+              className="w-full px-4 py-3 border-2 border-gray-300 rounded-md text-left bg-white hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors flex justify-between items-center"
             >
-                <span className="truncate">
-                    {selectedDates.length > 0 ? `${selectedDates.length}件の日付を選択` : '日付で絞り込み'}
-                </span>
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-                </svg>
+              <span className="text-gray-700">
+                {selectedDates.length > 0
+                  ? `${selectedDates.length}${language === 'ja' ? '日選択中' : ' dates selected'}`
+                  : (language === 'ja' ? '日付で絞り込み' : 'Filter by date')}
+              </span>
+              <svg
+                className={`w-5 h-5 transition-transform ${
+                  isDateDropdownOpen ? 'transform rotate-180' : ''
+                }`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
             </button>
             {isDateDropdownOpen && (
                 <div className="absolute right-0 mt-2 w-64 bg-white border border-gray-200 rounded-md shadow-lg z-40 max-h-80 overflow-y-auto">
@@ -165,7 +191,9 @@ const FilterControls: React.FC<FilterControlsProps> = ({
                             const date = new Date(day.date + 'T00:00:00');
                             const month = date.getMonth() + 1;
                             const dateNum = date.getDate();
-                            const displayDate = `${month}/${dateNum}(${day.weekday})`;
+                            // Use English weekday if available and language is English
+                            const weekday = language === 'en' && day.weekday_en ? day.weekday_en : day.weekday;
+                            const displayDate = `${month}/${dateNum}(${weekday})`;
                             const isSelected = selectedDates.includes(day.date);
 
                             return (
@@ -175,9 +203,9 @@ const FilterControls: React.FC<FilterControlsProps> = ({
                                             type="checkbox"
                                             checked={isSelected}
                                             onChange={() => handleDateCheckboxChange(day.date)}
-                                            className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                            className="mr-3 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                                         />
-                                        <span className={`ml-3 font-semibold ${getDayHeaderColor(day.date)}`}>
+                                        <span className={getDayHeaderColor(day.date)}>
                                             {displayDate}
                                         </span>
                                     </label>
@@ -191,7 +219,7 @@ const FilterControls: React.FC<FilterControlsProps> = ({
                           onClick={() => onSelectDates([])}
                           className="w-full text-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded"
                         >
-                          選択をクリア
+                          {language === 'ja' ? '選択をクリア' : 'Clear selection'}
                         </button>
                       </div>
                     )}
@@ -202,64 +230,61 @@ const FilterControls: React.FC<FilterControlsProps> = ({
 
       <div>
         {/* Region Tabs */}
-        <div className="flex flex-wrap border-b border-gray-200 -mb-px">
-          {regions.map((region) => (
-            <div key={region.id} className="relative">
-              <button
-                onClick={() => onSelectRegion(region)}
-                className={`whitespace-nowrap py-4 px-6 text-base font-medium border-b-2 transition-colors duration-200
-                  ${
-                    selectedRegion.id === region.id
-                      ? 'border-red-700 text-red-700'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-              >
-                {region.name}
-              </button>
-              {selectedRegion.id === region.id && (
-                <div className="absolute bottom-[-10px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-8 border-l-transparent border-r-8 border-r-transparent border-t-8 border-t-red-700"></div>
-              )}
-            </div>
-          ))}
-        </div>
+      <div className="flex flex-wrap gap-2">
+        {regions.map((region) => (
+          <button
+            key={region.id}
+            onClick={() => onSelectRegion(region)}
+            className={`px-4 py-2 rounded-md font-semibold transition-colors ${
+              selectedRegion.id === region.id
+                ? 'bg-slate-800 text-white'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+            aria-pressed={selectedRegion.id === region.id}
+          >
+            {language === 'ja' ? region.name : (region.name_en || region.name)}
+          </button>
+        ))}
+      </div>
 
         {/* Prefecture Buttons */}
         {currentPrefectures.length > 0 && (
-          <div className="mt-8 flex flex-wrap gap-4">
-              <button
-                  onClick={() => onSelectPrefecture(null)}
-                  className={`px-5 py-3 rounded-lg text-base font-semibold flex items-center gap-2 transition-colors duration-200 ${
-                    !selectedPrefecture
-                      ? 'bg-blue-900 text-white shadow-md'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-              >
-                  すべて
-              </button>
-            {currentPrefectures.map((prefecture) => (
-              <button
-                key={prefecture.id}
-                onClick={() => onSelectPrefecture(prefecture)}
-                className={`px-5 py-3 rounded-lg text-base font-semibold flex items-center gap-2 transition-colors duration-200 ${
-                  selectedPrefecture?.id === prefecture.id
-                    ? 'bg-blue-900 text-white shadow-md'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {prefecture.name}
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-                </svg>
-              </button>
-            ))}
-          </div>
+      <div className="mt-8 flex flex-wrap gap-2">
+        <button
+          onClick={() => onSelectPrefecture(null)}
+          className={`px-4 py-2 rounded-md font-semibold transition-colors ${
+            !selectedPrefecture
+              ? 'bg-blue-600 text-white'
+              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+          }`}
+          aria-pressed={!selectedPrefecture}
+        >
+          {language === 'ja' ? 'すべて' : 'All'}
+        </button>
+        {currentPrefectures.map((prefecture) => (
+          <button
+            key={prefecture.id}
+            onClick={() => onSelectPrefecture(prefecture)}
+            className={`px-4 py-2 rounded-md font-semibold transition-colors ${
+              selectedPrefecture?.id === prefecture.id
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+            aria-pressed={selectedPrefecture?.id === prefecture.id}
+          >
+            {language === 'ja' ? prefecture.name : (prefecture.name_en || prefecture.name)}
+          </button>
+        ))}
+      </div>
         )}
 
         {/* City/Ward Buttons */}
         {selectedPrefecture && cities.length > 0 && (
           <div className="mt-8 pt-6 border-t border-gray-200">
               <div className="flex items-center mb-4">
-                  <h3 className="text-xl font-bold text-gray-800">{selectedPrefecture.name} ―</h3>
+                  <h3 className="text-xl font-bold text-gray-800">
+                    {language === 'ja' ? selectedPrefecture.name : (selectedPrefecture.name_en || selectedPrefecture.name)} ―
+                  </h3>
               </div>
               <div className="flex flex-wrap gap-3">
                   <button
@@ -270,7 +295,7 @@ const FilterControls: React.FC<FilterControlsProps> = ({
                               : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                       }`}
                   >
-                      すべて
+                      {language === 'ja' ? 'すべて' : 'All'}
                   </button>
                   {cities.map((city) => (
                       <button
@@ -282,7 +307,7 @@ const FilterControls: React.FC<FilterControlsProps> = ({
                                   : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                           }`}
                       >
-                          {city}
+                          {language === 'ja' ? city : (CITY_TRANSLATIONS[city] || city)}
                       </button>
                   ))}
               </div>

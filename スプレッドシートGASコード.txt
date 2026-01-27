@@ -1,0 +1,347 @@
+/**
+ * @OnlyCurrentDoc
+ */
+
+// --- 設定項目 ---
+const SHEET_NAME = '店舗一覧';
+const HEADER_ROW = 1; // 日付ヘッダー行は1行目
+const DATA_START_ROW = 3; // データは3行目から
+const DATA_START_COLUMN = 3; // データが始まる列のインデックス (C列 = 3)
+const DAYS_TO_FETCH = 10; // 本日から10日間のデータを取得
+
+// 🔧 GitHub設定
+// ▼▼▼ スクリプトプロパティから値を取得するように変更 ▼▼▼
+const GITHUB_USERNAME = PropertiesService.getScriptProperties().getProperty('GITHUB_USERNAME');
+const GITHUB_TOKEN = PropertiesService.getScriptProperties().getProperty('GITHUB_TOKEN');
+// ▲▲▲ スクリプトプロパティから値を取得するように変更 ▲▲▲
+const GITHUB_REPO = 'store-hours-data';
+const JSON_FILE_PATH = 'store-hours.json';
+const GITHUB_BRANCH = 'main';
+// --- 設定はここまで ---
+
+/**
+ * スプレッドシートを開いた時にカスタムメニューを追加します。
+ */
+function onOpen(e) {
+  SpreadsheetApp.getUi()
+    .createMenu('営業時間更新')
+    .addItem('GitHubに公開', 'pushToGitHub')
+    .addToUi();
+}
+
+/**
+ * 【手動実行用】メニューからこの関数を呼び出します。
+ * UIに結果を表示します。
+ */
+function pushToGitHub() {
+  updateGitHubJson(true); // 手動実行モードで本体の関数を呼び出す
+}
+
+/**
+ * 【タイマー実行専用】トリガーからこの関数を呼び出します。
+ * UI操作を行わず、ログに結果を記録します。
+ */
+function publishToGitHub_forTrigger() {
+  updateGitHubJson(false); // 自動実行モードで本体の関数を呼び出す
+}
+
+/**
+ * GitHubへJSONデータを更新する本体の処理
+ * @param {boolean} isManual - 手動実行の場合はtrue、自動実行の場合はfalse
+ */
+function updateGitHubJson(isManual) {
+  try {
+    const data = getSheetDataAsJson();
+    if (!data || data.length === 0) {
+      throw new Error('スプレッドシートから有効なデータが取得できませんでした。');
+    }
+    const jsonString = JSON.stringify(data, null, 2);
+
+    // 1. GitHubから既存ファイルのSHAを取得
+    const getUrl = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${JSON_FILE_PATH}`;
+    const getOptions = {
+      method: 'get',
+      headers: { 'Authorization': `token ${GITHUB_TOKEN}`, 'Accept': 'application/vnd.github.v3+json' },
+      muteHttpExceptions: true
+    };
+    const getResponse = UrlFetchApp.fetch(getUrl, getOptions);
+
+    let fileSha = null;
+    if (getResponse.getResponseCode() === 200) {
+      fileSha = JSON.parse(getResponse.getContentText()).sha;
+    }
+
+    // 2. ファイルをGitHubに作成または更新
+    const putUrl = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${JSON_FILE_PATH}`;
+    const commitMessage = `[${isManual ? '手動' : '自動'}更新] 営業時間データ更新 - ${new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}`;
+
+    const payload = {
+      message: commitMessage,
+      content: Utilities.base64Encode(jsonString, Utilities.Charset.UTF_8),
+      branch: GITHUB_BRANCH,
+      ...(fileSha && { sha: fileSha }) // fileShaが存在する場合のみshaプロパティを追加
+    };
+
+    const putOptions = {
+      method: 'put',
+      headers: {
+        'Authorization': `token ${GITHUB_TOKEN}`,
+        'Accept': 'application/vnd.github.v3+json',
+        'Content-Type': 'application/json'
+      },
+      payload: JSON.stringify(payload),
+      muteHttpExceptions: true
+    };
+
+    const putResponse = UrlFetchApp.fetch(putUrl, putOptions);
+    const responseCode = putResponse.getResponseCode();
+
+    // 3. 結果を通知（手動か自動かで方法を分岐）
+    if (responseCode === 200 || responseCode === 201) {
+      const successMessage = 'GitHubへの公開に成功しました。';
+      if (isManual) {
+        const publicURL = `https://${GITHUB_USERNAME}.github.io/${GITHUB_REPO}/${JSON_FILE_PATH}`;
+        SpreadsheetApp.getUi().alert(`✅ ${successMessage}\n\n公開URL（数分後に反映）:\n${publicURL}`);
+      } else {
+        console.log(successMessage); // 自動実行時はログに出力
+      }
+    } else {
+      const errorMessage = `GitHubへの公開に失敗しました: ${putResponse.getContentText()}`;
+      if (isManual) {
+        SpreadsheetApp.getUi().alert(`❌ エラーが発生しました:\n${errorMessage}`);
+      } else {
+        console.error(errorMessage); // 自動実行時はエラーログに出力
+      }
+    }
+  } catch (e) {
+    const errorMessage = `実行中にエラーが発生しました: ${e.message}`;
+    if (isManual) {
+      SpreadsheetApp.getUi().alert(`❌ エラーが発生しました:\n${errorMessage}`);
+    } else {
+      console.error(errorMessage); // 自動実行時はエラーログに出力
+    }
+  }
+}
+
+// --- データ取得・加工用の関数 ---
+
+function getSheetDataAsJson() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+  if (!sheet) throw new Error(`シート名「${SHEET_NAME}」が見つかりません。`);
+
+  // データ範囲を調整: DATA_START_COLUMN から最終列までを取得
+  const lastColumn = sheet.getLastColumn();
+  const range = sheet.getRange(1, 1, sheet.getLastRow(), lastColumn);
+  const allData = range.getValues();
+
+  // ヘッダー (1行目)
+  const headers = allData[HEADER_ROW - 1];
+  // データ部 (DATA_START_ROW以降)
+  const storesData = allData.slice(DATA_START_ROW - 1);
+
+  // ▼▼▼ 基準日ロジック（7:00ロールオーバー） ▼▼▼
+  const now = new Date();
+  if (now.getHours() < 7) {
+    now.setDate(now.getDate() - 1);
+  }
+  const today = now;
+  // ▲▲▲
+
+  today.setHours(0, 0, 0, 0);
+  const currentYear = today.getFullYear();
+  const currentMonth = today.getMonth();
+
+  const dateColumns = [];
+
+  // 日付の開始列: L列 = index 11
+  // DATA_START_COLUMN = 3 (C列), +8 = 11
+  const DATE_START_COL_INDEX = DATA_START_COLUMN + 8; // L列から開始
+
+  for (let i = DATE_START_COL_INDEX; i < headers.length; i++) {
+    const headerValue = headers[i];
+    if (!headerValue) continue;
+
+    let headerDate = null;
+    if (headerValue instanceof Date) {
+      headerDate = new Date(headerValue);
+    } else if (typeof headerValue === 'string') {
+      const matches = headerValue.trim().match(/(\d{1,2})月(\d{1,2})日/);
+      if (matches) {
+        const month = parseInt(matches[1], 10) - 1;
+        const day = parseInt(matches[2], 10);
+        // 年度の自動補正
+        const year = (currentMonth === 11 && month === 0) ? currentYear + 1 : currentYear;
+        headerDate = new Date(year, month, day);
+      }
+    }
+
+    if (headerDate) {
+      headerDate.setHours(0, 0, 0, 0);
+      const daysDiff = Math.floor((headerDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      if (daysDiff >= 0 && daysDiff < DAYS_TO_FETCH) {
+        dateColumns.push({
+          date: Utilities.formatDate(headerDate, 'JST', 'yyyy-MM-dd'),
+          weekday: ['日', '月', '火', '水', '木', '金', '土'][headerDate.getDay()],
+          openIndex: i,
+          closeIndex: i + 1,
+          sortOrder: daysDiff
+        });
+      }
+    }
+  }
+  dateColumns.sort((a, b) => a.sortOrder - b.sortOrder);
+
+  const result = [];
+  for (let i = 0; i < storesData.length; i++) {
+    const currentRow = storesData[i];
+    // 店舗IDはDATA_START_COLUMNから数えて0番目 (index 2)
+    const numericId = parseInt(currentRow[DATA_START_COLUMN - 1], 10);
+
+    if (isNaN(numericId)) continue;
+
+    // 次の行の店舗ID列が空欄なら、その行は現在の店舗の追加営業時間と見なす
+    let nextRow = null;
+    if (i + 1 < storesData.length && !storesData[i + 1][DATA_START_COLUMN - 1]) {
+      nextRow = storesData[i + 1];
+    }
+
+    const days = dateColumns.map(col => {
+      const hours = [];
+      const openTime1 = formatAndNormalizeTime(currentRow[col.openIndex], false);
+      const closeTime1 = formatAndNormalizeTime(currentRow[col.closeIndex], true);
+      if (openTime1 && closeTime1) {
+        hours.push({ open: openTime1, close: closeTime1 });
+      }
+
+      if (nextRow) {
+        const openTime2 = formatAndNormalizeTime(nextRow[col.openIndex], false);
+        const closeTime2 = formatAndNormalizeTime(nextRow[col.closeIndex], true);
+        if (openTime2 && closeTime2) {
+          hours.push({ open: openTime2, close: closeTime2 });
+        }
+      }
+
+      const status = hours.length > 0 ? 'open' : 'holiday';
+
+      const dayData = {
+        date: col.date,
+        weekday: col.weekday,
+        status: status,
+      };
+
+      if (status === 'open') {
+        dayData.hours = hours;
+      }
+      return dayData;
+    });
+
+    result.push({
+      store: {
+        id: `store_${numericId}`,
+        numericId: numericId,
+        // ▼▼▼ 列マッピング (Screenshot最新版準拠) ▼▼▼
+        // C列(idx 2): 店舗ID
+        // D列(idx 3): 個店URL
+        // E列(idx 4): 店名 (JP)
+        // F列(idx 5): 住所 (JP)
+        // G列(idx 6): 地域
+        // H列(idx 7): 都道府県 (未使用)
+        // I列(idx 8): 区市町村 (未使用)
+        // J列(idx 9): name_en
+        // K列(idx 10): prefecture_en
+
+        url: String(currentRow[DATA_START_COLUMN]),          // D列(idx 3)
+        name: String(currentRow[DATA_START_COLUMN + 1]),     // E列(idx 4)
+        name_en: String(currentRow[DATA_START_COLUMN + 6]),  // J列(idx 9)
+        prefecture: String(currentRow[DATA_START_COLUMN + 2]), // F列(idx 5)
+        prefecture_en: String(currentRow[DATA_START_COLUMN + 7]), // K列(idx 10)
+        region: mapRegionToId(currentRow[DATA_START_COLUMN + 3]), // G列(idx 6)
+      },
+      range: {
+        from: dateColumns.length > 0 ? dateColumns[0].date : Utilities.formatDate(today, 'JST', 'yyyy-MM-dd'),
+        days: dateColumns.length,
+        tz: 'Asia/Tokyo',
+        rollover_at: '07:00',
+      },
+      days: days,
+      updatedAt: new Date().toISOString(),
+    });
+
+    if (nextRow) {
+      i++;
+    }
+  }
+  return result;
+}
+
+/**
+ * コロン不備などを正規化
+ */
+function formatAndNormalizeTime(timeInput, isCloseTime = false) {
+  if (timeInput == null || timeInput === '') return '';
+
+  let timeStr;
+
+  if (timeInput instanceof Date) {
+    timeStr = Utilities.formatDate(timeInput, 'Asia/Tokyo', 'HH:mm');
+  } else {
+    timeStr = String(timeInput).trim();
+    if (/[休-]/.test(timeStr)) return '';
+
+    timeStr = timeStr
+      .replace(/o/gi, '0')
+      .replace(/[()]/g, '')
+      .replace(/[Ａ-Ｚａ-ｚ０-９．：；，、・･]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0))
+      .replace(/[.;,、，・･]/g, ':')
+      .replace(/:+/g, ':')
+      .replace(/^:|:$/g, '');
+
+    const onlyDigits = timeStr.replace(/\D/g, '');
+    if ((/^\d{3,4}$/.test(onlyDigits)) && !timeStr.includes(':')) {
+      timeStr = onlyDigits.slice(0, -2) + ':' + onlyDigits.slice(-2);
+    } else if (timeStr.includes(':')) {
+      const parts = timeStr.split(':').filter(Boolean);
+      if (parts.length >= 2) {
+        let h = parts[0], m = parts[1];
+        if (/^\d$/.test(m)) m = '0' + m;
+        timeStr = `${h}:${m}`;
+      } else {
+        if (/^\d{3,4}$/.test(onlyDigits)) {
+          timeStr = onlyDigits.slice(0, -2) + ':' + onlyDigits.slice(-2);
+        } else {
+          return '';
+        }
+      }
+    } else {
+      return '';
+    }
+  }
+
+  if (!/^\d{1,2}:\d{2}$/.test(timeStr)) return '';
+
+  const [hStr, mStr] = timeStr.split(':');
+  let hour = parseInt(hStr, 10);
+  let minute = parseInt(mStr, 10);
+  if (Number.isNaN(hour) || Number.isNaN(minute)) return '';
+  if (minute < 0 || minute > 59) return '';
+
+  if (isCloseTime && hour >= 0 && hour <= 7) {
+    hour += 24;
+  }
+
+  return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+}
+
+function mapRegionToId(regionName) {
+  const regionMap = {
+    '北海道': 'hokkaido',
+    '東北': 'tohoku',
+    '関東': 'kanto',
+    '中部': 'chubu',
+    '近畿': 'kinki',
+    '関西': 'kinki',
+    '九州': 'kyushu',
+    // 必要に応じて他の地域を追加
+  };
+  return regionMap[regionName] || null;
+}
