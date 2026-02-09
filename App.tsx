@@ -32,7 +32,11 @@ const App: React.FC = () => {
     const saved = localStorage.getItem('hub_favorite_store_ids');
     return saved ? JSON.parse(saved) : [];
   });
-  const [showOnlyFavorites, setShowOnlyFavorites] = useState<boolean>(false);
+  const [showOnlyFavorites, setShowOnlyFavorites] = useState<boolean>(() => {
+    const saved = localStorage.getItem('hub_favorite_store_ids');
+    const ids = saved ? JSON.parse(saved) : [];
+    return ids.length > 0;
+  });
 
   useEffect(() => {
     localStorage.setItem('hub_favorite_store_ids', JSON.stringify(favoriteStoreIds));
