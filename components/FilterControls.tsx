@@ -22,8 +22,8 @@ interface FilterControlsProps {
   selectedDates: string[];
   onSelectDates: (dates: string[]) => void;
   storeNames: string[];
-  selectedStore: string | null;
-  onSelectStore: (storeName: string | null) => void;
+  selectedStores: string[];
+  onSelectStores: (storeNames: string[]) => void;
   allStores: StoreHoursResponse[];
   language: 'ja' | 'en';
   showOnlyFavorites: boolean;
@@ -50,8 +50,8 @@ const FilterControls: React.FC<FilterControlsProps> = ({
   selectedDates,
   onSelectDates,
   storeNames,
-  selectedStore,
-  onSelectStore,
+  selectedStores,
+  onSelectStores,
   allStores,
   language,
   showOnlyFavorites,
@@ -60,7 +60,9 @@ const FilterControls: React.FC<FilterControlsProps> = ({
 }) => {
   const currentPrefectures = prefecturesByRegion[selectedRegion.id] || [];
   const [isDateDropdownOpen, setIsDateDropdownOpen] = useState(false);
+  const [isStoreDropdownOpen, setIsStoreDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const storeDropdownRef = useRef<HTMLDivElement>(null);
 
   const getDayHeaderColor = (dateStr: string) => {
     const date = new Date(dateStr + 'T00:00:00');
@@ -83,12 +85,15 @@ const FilterControls: React.FC<FilterControlsProps> = ({
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsDateDropdownOpen(false);
       }
+      if (storeDropdownRef.current && !storeDropdownRef.current.contains(event.target as Node)) {
+        setIsStoreDropdownOpen(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [dropdownRef]);
+  }, [dropdownRef, storeDropdownRef]);
 
   return (
     <div className="bg-white p-6 rounded-lg shadow space-y-8">
@@ -122,7 +127,7 @@ const FilterControls: React.FC<FilterControlsProps> = ({
                 {language === 'ja' ? '検索' : 'Search'}
             </button>
             </form>
-            {(isFiltered || selectedStore !== null) && (
+            {(isFiltered || selectedStores.length > 0) && (
                 <button
                     type="button"
                     onClick={onResetFilters}
@@ -133,34 +138,62 @@ const FilterControls: React.FC<FilterControlsProps> = ({
                 </button>
             )}
         </div>
-        {/* Store Name Dropdown */}
-        <div className="relative flex-shrink-0">
-            <label htmlFor="store-select" className="sr-only">
-              {language === 'ja' ? '店名で絞り込み' : 'Filter by store'}
-            </label>
-            <select
-                id="store-select"
-                value={selectedStore || ''}
-                onChange={(e) => onSelectStore(e.target.value === '' ? null : e.target.value)}
-                className="appearance-none w-full md:w-52 px-4 py-3 text-base text-left bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        {/* Store Name Dropdown (Multi-select) */}
+        <div className="relative flex-shrink-0" ref={storeDropdownRef}>
+            <button
+                type="button"
+                onClick={() => setIsStoreDropdownOpen(!isStoreDropdownOpen)}
+                className="w-full md:w-52 px-4 py-3 border border-gray-300 rounded-md text-left bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 flex justify-between items-center"
                 aria-label={language === 'ja' ? "店名で絞り込み" : "Filter by store"}
             >
-                <option value="">{language === 'ja' ? '店名で絞り込み' : 'Filter by store'}</option>
-                {storeNames.map((name) => {
-                    const storeData = allStores.find(s => s.store.name === name);
-                    const displayName = language === 'ja' ? name : (storeData?.store.name_en || name);
-                    return (
-                        <option key={name} value={name}>
-                            {displayName}
-                        </option>
-                    );
-                })}
-            </select>
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                <span className="truncate block">
+                    {selectedStores.length > 0
+                        ? `${selectedStores.length}${language === 'ja' ? '店舗選択中' : ' stores selected'}`
+                        : (language === 'ja' ? '店名で絞り込み' : 'Filter by store')}
+                </span>
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
                 </svg>
-            </div>
+            </button>
+            {isStoreDropdownOpen && (
+                <div className="absolute left-0 mt-1 w-64 bg-white border border-gray-200 rounded-md shadow-lg z-50 max-h-80 overflow-y-auto">
+                    <ul className="py-1">
+                        {storeNames.map((name) => {
+                            const storeData = allStores.find(s => s.store.name === name);
+                            const displayName = language === 'ja' ? name : (storeData?.store.name_en || name);
+                            const isSelected = selectedStores.includes(name);
+                            return (
+                                <li key={name}>
+                                    <label className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={isSelected}
+                                            onChange={() => {
+                                                const newSelection = isSelected
+                                                    ? selectedStores.filter(s => s !== name)
+                                                    : [...selectedStores, name];
+                                                onSelectStores(newSelection);
+                                            }}
+                                            className="mr-3 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                        />
+                                        <span className="break-words">{displayName}</span>
+                                    </label>
+                                </li>
+                            );
+                        })}
+                    </ul>
+                    {selectedStores.length > 0 && (
+                        <div className="p-2 border-t border-gray-200">
+                        <button
+                            onClick={() => onSelectStores([])}
+                            className="w-full text-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded"
+                        >
+                            {language === 'ja' ? '選択をクリア' : 'Clear selection'}
+                        </button>
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
         {/* Date Filter Dropdown */}
         <div className="relative flex-shrink-0" ref={dropdownRef}>

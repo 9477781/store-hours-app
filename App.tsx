@@ -25,7 +25,7 @@ const App: React.FC = () => {
   const [inputTerm, setInputTerm] = useState<string>("");
   const [appliedTerm, setAppliedTerm] = useState<string>("");
   const [selectedDates, setSelectedDates] = useState<string[]>([]);
-  const [selectedStore, setSelectedStore] = useState<string | null>(null);
+  const [selectedStores, setSelectedStores] = useState<string[]>([]);
   const [focusedStoreId, setFocusedStoreId] = useState<string | null>(null);
   const [language, setLanguage] = useState<'ja' | 'en'>('ja');
   const [favoriteStoreIds, setFavoriteStoreIds] = useState<string[]>(() => {
@@ -89,7 +89,7 @@ const App: React.FC = () => {
     setSelectedRegion(region);
     setSelectedPrefecture(null); // Reset prefecture when region changes
     setSelectedCity(null); // Reset city as well
-    setSelectedStore(null); // Reset store selection
+    setSelectedStores([]); // Reset store selection
     setFocusedStoreId(null);
     setShowOnlyFavorites(false); // Disable favorites mode when explicitly selecting a region
   };
@@ -102,7 +102,7 @@ const App: React.FC = () => {
       setSelectedPrefecture(prefecture);
     }
     setSelectedCity(null); // Reset city when prefecture changes
-    setSelectedStore(null); // Reset store selection
+    setSelectedStores([]); // Reset store selection
     setFocusedStoreId(null);
   };
 
@@ -142,7 +142,7 @@ const App: React.FC = () => {
     } else {
       setSelectedCity(city);
     }
-    setSelectedStore(null); // Reset store selection
+    setSelectedStores([]); // Reset store selection
     setFocusedStoreId(null);
   };
 
@@ -152,7 +152,7 @@ const App: React.FC = () => {
 
   const handleSearchSubmit = () => {
     setAppliedTerm(inputTerm);
-    setSelectedStore(null);
+    setSelectedStores([]);
     setFocusedStoreId(null);
   };
 
@@ -161,8 +161,8 @@ const App: React.FC = () => {
     setFocusedStoreId(null);
   };
 
-  const handleSelectStore = (storeName: string | null) => {
-    setSelectedStore(storeName);
+  const handleSelectStores = (storeNames: string[]) => {
+    setSelectedStores(storeNames);
     setFocusedStoreId(null);
   };
 
@@ -174,7 +174,7 @@ const App: React.FC = () => {
       selectedPrefecture !== null ||
       selectedCity !== null ||
       selectedDates.length > 0 ||
-      selectedStore !== null ||
+      selectedStores.length > 0 ||
       focusedStoreId !== null ||
       showOnlyFavorites ||
       favoriteStoreIds.length > 0
@@ -186,7 +186,7 @@ const App: React.FC = () => {
     selectedPrefecture,
     selectedCity,
     selectedDates,
-    selectedStore,
+    selectedStores,
     focusedStoreId,
     showOnlyFavorites,
     favoriteStoreIds,
@@ -199,7 +199,7 @@ const App: React.FC = () => {
     setSelectedPrefecture(null);
     setSelectedCity(null);
     setSelectedDates([]);
-    setSelectedStore(null);
+    setSelectedStores([]);
     setFocusedStoreId(null);
     setShowOnlyFavorites(false);
     setFavoriteStoreIds([]); // お気に入り登録（☆の黄色）をデフォルトに戻す
@@ -301,11 +301,11 @@ const App: React.FC = () => {
     // If a keyword search results in a single store, automatically select it in the dropdown.
     if (appliedTerm && storesFilteredByKeyword.length === 1) {
       const uniqueStoreName = storesFilteredByKeyword[0].store.name;
-      if (selectedStore !== uniqueStoreName) {
-        setSelectedStore(uniqueStoreName);
+      if (selectedStores.length === 0 || (selectedStores.length === 1 && selectedStores[0] !== uniqueStoreName)) {
+        setSelectedStores([uniqueStoreName]);
       }
     }
-  }, [appliedTerm, storesFilteredByKeyword, selectedStore]);
+  }, [appliedTerm, storesFilteredByKeyword, selectedStores]);
 
   const filteredStores = useMemo(() => {
     let result: StoreHoursResponse[];
@@ -338,15 +338,15 @@ const App: React.FC = () => {
       result = storesFilteredByKeyword;
     }
 
-    if (!selectedStore) {
+    if (selectedStores.length === 0) {
       return result;
     }
     return result.filter(
-      (storeData) => storeData.store.name === selectedStore
+      (storeData) => selectedStores.includes(storeData.store.name)
     );
   }, [
     storesFilteredByKeyword,
-    selectedStore,
+    selectedStores,
     showOnlyFavorites,
     favoriteStoreIds,
     sortedAllStores,
@@ -424,8 +424,8 @@ const App: React.FC = () => {
           selectedDates={selectedDates}
           onSelectDates={handleSelectDates}
           storeNames={storeNamesForDropdown}
-          selectedStore={selectedStore}
-          onSelectStore={handleSelectStore}
+          selectedStores={selectedStores}
+          onSelectStores={handleSelectStores}
           allStores={sortedAllStores}
           language={language}
           showOnlyFavorites={showOnlyFavorites}
