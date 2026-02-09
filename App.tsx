@@ -28,6 +28,32 @@ const App: React.FC = () => {
   const [selectedStore, setSelectedStore] = useState<string | null>(null);
   const [focusedStoreId, setFocusedStoreId] = useState<string | null>(null);
   const [language, setLanguage] = useState<'ja' | 'en'>('ja');
+  const [favoriteStoreIds, setFavoriteStoreIds] = useState<string[]>(() => {
+    const saved = localStorage.getItem('hub_favorite_store_ids');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [showOnlyFavorites, setShowOnlyFavorites] = useState<boolean>(false);
+
+  useEffect(() => {
+    localStorage.setItem('hub_favorite_store_ids', JSON.stringify(favoriteStoreIds));
+  }, [favoriteStoreIds]);
+
+  const handleToggleFavorite = useCallback((storeId: string) => {
+    setFavoriteStoreIds((prev) => {
+      const newList = prev.includes(storeId)
+        ? prev.filter((id) => id !== storeId)
+        : [...prev, storeId];
+      // お気に入りが0個になったら、お気に入り表示モードも自動的に解除する
+      if (newList.length === 0) {
+        setShowOnlyFavorites(false);
+      }
+      return newList;
+    });
+  }, []);
+
+  const handleToggleShowFavorites = useCallback(() => {
+    setShowOnlyFavorites(prev => !prev);
+  }, []);
 
   const fetchAndSetData = useCallback(async (isBackgroundRefresh = false) => {
     if (!isBackgroundRefresh) {
@@ -65,6 +91,7 @@ const App: React.FC = () => {
     setSelectedCity(null); // Reset city as well
     setSelectedStore(null); // Reset store selection
     setFocusedStoreId(null);
+    setShowOnlyFavorites(false); // Disable favorites mode when explicitly selecting a region
   };
 
   const handleSelectPrefecture = (prefecture: Prefecture | null) => {
@@ -148,7 +175,9 @@ const App: React.FC = () => {
       selectedCity !== null ||
       selectedDates.length > 0 ||
       selectedStore !== null ||
-      focusedStoreId !== null
+      focusedStoreId !== null ||
+      showOnlyFavorites ||
+      favoriteStoreIds.length > 0
     );
   }, [
     inputTerm,
@@ -159,6 +188,8 @@ const App: React.FC = () => {
     selectedDates,
     selectedStore,
     focusedStoreId,
+    showOnlyFavorites,
+    favoriteStoreIds,
   ]);
 
   const handleResetFilters = useCallback(() => {
@@ -170,6 +201,8 @@ const App: React.FC = () => {
     setSelectedDates([]);
     setSelectedStore(null);
     setFocusedStoreId(null);
+    setShowOnlyFavorites(false);
+    setFavoriteStoreIds([]); // お気に入り登録（☆の黄色）をデフォルトに戻す
   }, []);
 
   const availableDates = useMemo(() => {
@@ -182,6 +215,13 @@ const App: React.FC = () => {
   // 1. まず全店舗を地域・都道府県順にソートしたリストを作成
   const sortedAllStores = useMemo(() => {
     return [...allStores].sort((a, b) => {
+      // お気に入りを最優先で上に表示（オプション：通常のリスト表示時のみ適用）
+      const isFavA = favoriteStoreIds.includes(a.store.id);
+      const isFavB = favoriteStoreIds.includes(b.store.id);
+      if (isFavA !== isFavB) {
+        return isFavA ? -1 : 1;
+      }
+
       // 地域順を定義に基づき取得
       const regionIndexA = REGIONS.findIndex((r) => r.id === a.store.region);
       const regionIndexB = REGIONS.findIndex((r) => r.id === b.store.region);
@@ -268,13 +308,50 @@ const App: React.FC = () => {
   }, [appliedTerm, storesFilteredByKeyword, selectedStore]);
 
   const filteredStores = useMemo(() => {
-    if (!selectedStore) {
-      return storesFilteredByKeyword;
+    let result: StoreHoursResponse[];
+
+    if (showOnlyFavorites) {
+      // Favorites mode: Select from ALL stores, ignoring region filter
+      result = sortedAllStores.filter(s => favoriteStoreIds.includes(s.store.id));
+
+      // Apply keyword filter if present
+      if (appliedTerm) {
+        const searchKeywords = toHalfWidth(appliedTerm)
+          .toLowerCase()
+          .split(/\s+/)
+          .filter(Boolean);
+        
+        if (searchKeywords.length > 0) {
+          result = result.filter((storeData) => {
+            const { store } = storeData;
+            const combinedStoreInfo = toHalfWidth(
+              `${store.name} ${store.name_en || ''} ${store.prefecture} ${store.prefecture_en || ''}`
+            ).toLowerCase();
+            return searchKeywords.every((keyword) =>
+              combinedStoreInfo.includes(keyword)
+            );
+          });
+        }
+      }
+    } else {
+      // Normal mode: Use existing logic (keyword search OR region filter)
+      result = storesFilteredByKeyword;
     }
-    return storesFilteredByKeyword.filter(
+
+    if (!selectedStore) {
+      return result;
+    }
+    return result.filter(
       (storeData) => storeData.store.name === selectedStore
     );
-  }, [storesFilteredByKeyword, selectedStore]);
+  }, [
+    storesFilteredByKeyword,
+    selectedStore,
+    showOnlyFavorites,
+    favoriteStoreIds,
+    sortedAllStores,
+    appliedTerm
+  ]);
 
   const storesToDisplay = useMemo(() => {
     if (focusedStoreId) {
@@ -351,20 +428,37 @@ const App: React.FC = () => {
           onSelectStore={handleSelectStore}
           allStores={sortedAllStores}
           language={language}
+          showOnlyFavorites={showOnlyFavorites}
+          onToggleShowFavorites={handleToggleShowFavorites}
+          hasFavorites={favoriteStoreIds.length > 0}
         />
         <div className="mt-8">
-          <p className="md:hidden text-sm text-gray-600 text-left mb-4">
-            {language === 'ja' ? '※ 左右にスワイプして全日程を確認できます。' : '* Swipe left or right to see all dates.'}
-            <br />
-            {language === 'ja' ? '「店名」をクリックすると、公式サイトの店舗詳細ページに移動します。' : 'Click "Shop Name" to visit the official store page.'}
-            <br />
-            {language === 'ja' ? '貸切営業やイベント営業、スポーツ放映等により通常営業時間と異なる場合がございます。' : 'Hours may vary due to private events, ceremonies, or sports broadcasts.'}
-          </p>
-          <p className="hidden md:block text-sm text-gray-600 text-center mb-4">
-            {language === 'ja' ? '「店名」をクリックすると、公式サイトの店舗詳細ページに移動します。' : 'Click "Shop Name" to visit the official store page.'}
-            <br />
-            {language === 'ja' ? '貸切営業やイベント営業、スポーツ放映等により通常営業時間と異なる場合がございます。' : 'Hours may vary due to private events, ceremonies, or sports broadcasts.'}
-          </p>
+          <div className="space-y-3 mb-6 bg-white/50 p-4 rounded-xl border border-gray-100">
+            {language === 'ja' && (
+              <p className="md:hidden text-xs text-gray-500 mb-2 italic">
+                ※ 左右にスワイプして全日程を確認できます。
+              </p>
+            )}
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 w-5 h-5 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-[10px] font-bold mt-0.5">i</div>
+              <div className="text-sm text-gray-600 leading-relaxed">
+                <p>
+                  {language === 'ja' ? '※ 店名をクリックすると、公式サイトの店舗詳細ページに移動します。' : '* Click "Shop Name" to visit the official store page.'}
+                </p>
+                <p>
+                  {language === 'ja' ? '※ 貸切営業やイベント営業、スポーツ放映等により、通常営業時間と異なる場合がございます。' : '* Hours may vary due to private events, ceremonies, or sports broadcasts.'}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 shadow-sm bg-yellow-50/30 p-3 rounded-lg border border-yellow-100/50">
+              <div className="flex-shrink-0 w-5 h-5 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center text-[10px] font-bold mt-0.5">★</div>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                {language === 'ja' 
+                  ? '☆マークをクリックすると★に変わり、お気に入りに登録されます。お気に入り登録した店舗がある場合、フィルター部分に「お気に入り」ボタンが表示され、登録した店舗だけを表示できます。' 
+                  : 'Click the ☆ icon to turn it into ★ and add the store to your favorites. When you have favorite stores, a "Favorites" button will appear in the filters to show only your saved stores.'}
+              </p>
+            </div>
+          </div>
           {isLoading ? (
             <div className="text-center py-10 bg-white rounded-lg shadow">
               <p className="text-lg text-gray-500">
@@ -389,10 +483,16 @@ const App: React.FC = () => {
               focusedStoreId={focusedStoreId}
               onStoreClick={handleStoreClick}
               language={language}
+              favoriteStoreIds={favoriteStoreIds}
+              onToggleFavorite={handleToggleFavorite}
             />
           )}
         </div>
       </main>
+
+      <footer className="py-12 border-t border-gray-100 text-center text-gray-400 text-xs font-inter tracking-widest uppercase">
+        &copy; {new Date().getFullYear()} Store Hours App • Refined for HUB
+      </footer>
     </div>
   );
 };

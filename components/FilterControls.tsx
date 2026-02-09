@@ -26,6 +26,9 @@ interface FilterControlsProps {
   onSelectStore: (storeName: string | null) => void;
   allStores: StoreHoursResponse[];
   language: 'ja' | 'en';
+  showOnlyFavorites: boolean;
+  onToggleShowFavorites: () => void;
+  hasFavorites: boolean;
 }
 
 const FilterControls: React.FC<FilterControlsProps> = ({
@@ -51,6 +54,9 @@ const FilterControls: React.FC<FilterControlsProps> = ({
   onSelectStore,
   allStores,
   language,
+  showOnlyFavorites,
+  onToggleShowFavorites,
+  hasFavorites,
 }) => {
   const currentPrefectures = prefecturesByRegion[selectedRegion.id] || [];
   const [isDateDropdownOpen, setIsDateDropdownOpen] = useState(false);
@@ -229,18 +235,34 @@ const FilterControls: React.FC<FilterControlsProps> = ({
       </div>
 
       <div>
-        {/* Region Tabs */}
-      <div className="flex flex-wrap gap-2">
+        {/* Favorite & Region Tabs */}
+      <div className="flex flex-wrap gap-2 items-center">
+        {hasFavorites && (
+          <button
+            onClick={onToggleShowFavorites}
+            className={`flex items-center gap-1 px-4 py-2 rounded-md font-semibold transition-colors border-2 ${
+              showOnlyFavorites
+                ? 'bg-yellow-100 border-yellow-500 text-yellow-800'
+                : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+            }`}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${showOnlyFavorites ? 'fill-yellow-500' : 'fill-gray-300'}`} viewBox="0 0 20 20" fill="currentColor">
+              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+            </svg>
+            {language === 'ja' ? 'お気に入り' : 'Favorites'}
+          </button>
+        )}
+        <div className="w-px h-8 bg-gray-200 mx-1 hidden sm:block"></div>
         {regions.map((region) => (
           <button
             key={region.id}
             onClick={() => onSelectRegion(region)}
             className={`px-4 py-2 rounded-md font-semibold transition-colors ${
-              selectedRegion.id === region.id
+              !showOnlyFavorites && selectedRegion.id === region.id
                 ? 'bg-slate-800 text-white'
                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
             }`}
-            aria-pressed={selectedRegion.id === region.id}
+            aria-pressed={!showOnlyFavorites && selectedRegion.id === region.id}
           >
             {language === 'ja' ? region.name : (region.name_en || region.name)}
           </button>
@@ -248,7 +270,7 @@ const FilterControls: React.FC<FilterControlsProps> = ({
       </div>
 
         {/* Prefecture Buttons */}
-        {currentPrefectures.length > 0 && (
+        {!showOnlyFavorites && currentPrefectures.length > 0 && (
       <div className="mt-8 flex flex-wrap gap-2">
         <button
           onClick={() => onSelectPrefecture(null)}
@@ -279,7 +301,7 @@ const FilterControls: React.FC<FilterControlsProps> = ({
         )}
 
         {/* City/Ward Buttons */}
-        {selectedPrefecture && cities.length > 0 && (
+        {!showOnlyFavorites && selectedPrefecture && cities.length > 0 && (
           <div className="mt-8 pt-6 border-t border-gray-200">
               <div className="flex items-center mb-4">
                   <h3 className="text-xl font-bold text-gray-800">
