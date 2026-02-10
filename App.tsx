@@ -494,9 +494,7 @@ const App: React.FC = () => {
         </div>
       </main>
 
-      <footer className="py-12 border-t border-gray-100 text-center text-gray-400 text-xs font-inter tracking-widest uppercase">
-        &copy; {new Date().getFullYear()} Store Hours App • Refined for HUB
-      </footer>
+
     </div>
   );
 };
