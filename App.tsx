@@ -5,6 +5,8 @@ import { REGIONS, PREFECTURES } from "./constants";
 import Header from "./components/Header";
 import FilterControls from "./components/FilterControls";
 import HoursTable from "./components/HoursTable";
+import { Analytics } from "@vercel/analytics/react";
+
 
 // Helper function to convert full-width alphanumeric to half-width for consistent searching
 const toHalfWidth = (str: string): string => {
@@ -493,8 +495,7 @@ const App: React.FC = () => {
           )}
         </div>
       </main>
-
-
+      <Analytics />
     </div>
   );
 };
