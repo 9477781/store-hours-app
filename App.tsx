@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { Analytics } from '@vercel/analytics/react';
 import { StoreHoursResponse, Region, Prefecture, Day } from "./types";
 import { fetchStoreHours } from "./services/api";
 import { REGIONS, PREFECTURES } from "./constants";
@@ -216,7 +217,7 @@ const App: React.FC = () => {
     return allStores[0].days.slice(0, 7);
   }, [allStores]);
 
-  // 1. まず全店舗を地域・都道府県順にソートしたリストを作成
+  // 1. まず全店舗を地域・都道府県順にソートし���リストを作成
   const sortedAllStores = useMemo(() => {
     return [...allStores].sort((a, b) => {
       // お気に入りを最優先で上に表示（オプション：通常のリスト表示時のみ適用）
@@ -493,7 +494,7 @@ const App: React.FC = () => {
           )}
         </div>
       </main>
-
+      <Analytics />
 
     </div>
   );
