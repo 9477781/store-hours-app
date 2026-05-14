@@ -325,9 +325,12 @@ function formatAndNormalizeTime(timeInput, isCloseTime = false) {
   if (Number.isNaN(hour) || Number.isNaN(minute)) return '';
   if (minute < 0 || minute > 59) return '';
 
+  // 閉店時間の0:00-7:00を24:00+に変換する処理を削除（店舗が24時間表記で直接入力するため）
+  /*
   if (isCloseTime && hour >= 0 && hour <= 7) {
     hour += 24;
   }
+  */
 
   return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
 }
