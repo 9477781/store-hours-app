@@ -25,22 +25,6 @@ const formatTime = (time?: string): string => {
   if (!time) {
     return "ー";
   }
-
-  // If time is not in HH:MM format (e.g., contains text), return as is.
-  if (!/^\d{2}:\d{2}$/.test(time)) {
-    return time;
-  }
-
-  const parts = time.split(":");
-  const hour = parseInt(parts[0], 10);
-  const minute = parts[1];
-
-  // Convert hours 00:00-05:59 to 24:00-29:59
-  if (hour >= 0 && hour < 6) {
-    const newHour = hour + 24;
-    return `${newHour}:${minute}`;
-  }
-
   return time;
 };
 
