@@ -199,27 +199,30 @@ function getSheetDataAsJson() {
 
     if (isNaN(numericId)) continue;
 
-    // 次の行の店舗ID列が空欄なら、その行は現在の店舗の追加営業時間と見なす
-    let nextRow = null;
-    if (i + 1 < storesData.length && !storesData[i + 1][DATA_START_COLUMN - 1]) {
-      nextRow = storesData[i + 1];
+    // ID列が空欄である限り、その行は現在の店舗の追加営業時間と見なしてすべて取得する
+    const subRows = [];
+    while (i + 1 < storesData.length && !storesData[i + 1][DATA_START_COLUMN - 1]) {
+      subRows.push(storesData[i + 1]);
+      i++; // メインループのインデックスをスキップさせる
     }
 
     const days = dateColumns.map(col => {
       const hours = [];
+      // 1行目の時間枠
       const openTime1 = formatAndNormalizeTime(currentRow[col.openIndex], false);
       const closeTime1 = formatAndNormalizeTime(currentRow[col.closeIndex], true);
       if (openTime1 && closeTime1) {
         hours.push({ open: openTime1, close: closeTime1 });
       }
 
-      if (nextRow) {
-        const openTime2 = formatAndNormalizeTime(nextRow[col.openIndex], false);
-        const closeTime2 = formatAndNormalizeTime(nextRow[col.closeIndex], true);
-        if (openTime2 && closeTime2) {
-          hours.push({ open: openTime2, close: closeTime2 });
+      // 2行目以降（追加行）の時間枠をすべて取得
+      subRows.forEach(row => {
+        const openTimeN = formatAndNormalizeTime(row[col.openIndex], false);
+        const closeTimeN = formatAndNormalizeTime(row[col.closeIndex], true);
+        if (openTimeN && closeTimeN) {
+          hours.push({ open: openTimeN, close: closeTimeN });
         }
-      }
+      });
 
       const status = hours.length > 0 ? 'open' : 'holiday';
 
@@ -267,12 +270,9 @@ function getSheetDataAsJson() {
       updatedAt: new Date().toISOString(),
     });
 
-    if (nextRow) {
-      i++;
     }
+    return result;
   }
-  return result;
-}
 
 /**
  * コロン不備などを正規化
