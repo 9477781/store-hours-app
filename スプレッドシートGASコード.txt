@@ -131,13 +131,14 @@ function getSheetDataAsJson() {
 
   // データ範囲を調整: DATA_START_COLUMN から最終列までを取得
   const lastColumn = sheet.getLastColumn();
-  const range = sheet.getRange(1, 1, sheet.getLastRow(), lastColumn);
   const allData = range.getValues();
+  const displayData = range.getDisplayValues();
 
   // ヘッダー (1行目)
   const headers = allData[HEADER_ROW - 1];
   // データ部 (DATA_START_ROW以降)
   const storesData = allData.slice(DATA_START_ROW - 1);
+  const displayStoresData = displayData.slice(DATA_START_ROW - 1);
 
   // ▼▼▼ 基準日ロジック（7:00ロールオーバー） ▼▼▼
   const now = new Date();
@@ -194,6 +195,7 @@ function getSheetDataAsJson() {
   const result = [];
   for (let i = 0; i < storesData.length; i++) {
     const currentRow = storesData[i];
+    const currentDisplayRow = displayStoresData[i];
     // 店舗IDはDATA_START_COLUMNから数えて0番目 (index 2)
     const numericId = parseInt(currentRow[DATA_START_COLUMN - 1], 10);
 
@@ -201,24 +203,26 @@ function getSheetDataAsJson() {
 
     // ID列が空欄である限り、その行は現在の店舗の追加営業時間と見なしてすべて取得する
     const subRows = [];
+    const subDisplayRows = [];
     while (i + 1 < storesData.length && !storesData[i + 1][DATA_START_COLUMN - 1]) {
       subRows.push(storesData[i + 1]);
+      subDisplayRows.push(displayStoresData[i + 1]);
       i++; // メインループのインデックスをスキップさせる
     }
 
     const days = dateColumns.map(col => {
       const hours = [];
       // 1行目の時間枠
-      const openTime1 = formatAndNormalizeTime(currentRow[col.openIndex], false);
-      const closeTime1 = formatAndNormalizeTime(currentRow[col.closeIndex], true);
+      const openTime1 = formatAndNormalizeTime(currentDisplayRow[col.openIndex], false);
+      const closeTime1 = formatAndNormalizeTime(currentDisplayRow[col.closeIndex], true);
       if (openTime1 && closeTime1) {
         hours.push({ open: openTime1, close: closeTime1 });
       }
 
       // 2行目以降（追加行）の時間枠をすべて取得
-      subRows.forEach(row => {
-        const openTimeN = formatAndNormalizeTime(row[col.openIndex], false);
-        const closeTimeN = formatAndNormalizeTime(row[col.closeIndex], true);
+      subDisplayRows.forEach(displayRow => {
+        const openTimeN = formatAndNormalizeTime(displayRow[col.openIndex], false);
+        const closeTimeN = formatAndNormalizeTime(displayRow[col.closeIndex], true);
         if (openTimeN && closeTimeN) {
           hours.push({ open: openTimeN, close: closeTimeN });
         }
@@ -332,7 +336,7 @@ function formatAndNormalizeTime(timeInput, isCloseTime = false) {
   }
   */
 
-  return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+  return timeStr; // UIに入力されたままの桁数（例: 2:00 や 26:00）をそのまま返す
 }
 
 function mapRegionToId(regionName) {
