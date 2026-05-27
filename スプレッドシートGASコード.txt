@@ -337,7 +337,7 @@ function formatAndNormalizeTime(timeInput, isCloseTime = false) {
   }
   */
 
-  return timeStr; // UIに入力されたままの桁数（例: 2:00 や 26:00）をそのまま返す
+  return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`; // UIに入力された時間を2桁に揃えて返す（例: 2:00 -> 02:00, 26:00 -> 26:00）
 }
 
 function mapRegionToId(regionName) {
