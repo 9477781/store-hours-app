@@ -131,6 +131,7 @@ function getSheetDataAsJson() {
 
   // データ範囲を調整: DATA_START_COLUMN から最終列までを取得
   const lastColumn = sheet.getLastColumn();
+  const range = sheet.getRange(1, 1, sheet.getLastRow(), lastColumn);
   const allData = range.getValues();
   const displayData = range.getDisplayValues();
 
