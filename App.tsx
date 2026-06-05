@@ -6,6 +6,7 @@ import Header from "./components/Header";
 import FilterControls from "./components/FilterControls";
 import HoursTable from "./components/HoursTable";
 import { Analytics } from "@vercel/analytics/react";
+import { initGA, trackEvent } from "./services/gtag";
 
 
 // Helper function to convert full-width alphanumeric to half-width for consistent searching
@@ -58,7 +59,14 @@ const App: React.FC = () => {
   }, []);
 
   const handleToggleShowFavorites = useCallback(() => {
-    setShowOnlyFavorites(prev => !prev);
+    setShowOnlyFavorites(prev => {
+      const next = !prev;
+      trackEvent("tab_switch", {
+        tab_name: "show_favorites_only",
+        value: next ? "favorites" : "all"
+      });
+      return next;
+    });
   }, []);
 
   const fetchAndSetData = useCallback(async (isBackgroundRefresh = false) => {
@@ -81,6 +89,7 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    initGA(); // Initialize GA4
     fetchAndSetData(false); // Initial fetch with loading indicator
     const intervalId = setInterval(() => fetchAndSetData(true), 3600 * 1000); // Auto-refresh every 1 hour in the background
 
@@ -88,8 +97,19 @@ const App: React.FC = () => {
   }, [fetchAndSetData]);
 
   const handleStoreClick = useCallback((storeId: string) => {
-    setFocusedStoreId((prevId) => (prevId === storeId ? null : storeId));
-  }, []);
+    setFocusedStoreId((prevId) => {
+      const nextId = prevId === storeId ? null : storeId;
+      if (nextId) {
+        const store = allStores.find((s) => s.store.id === nextId);
+        trackEvent("hours_view", {
+          store_id: nextId,
+          store_name: store?.store.name || "unknown",
+          method: "click_store"
+        });
+      }
+      return nextId;
+    });
+  }, [allStores]);
 
   const handleSelectRegion = (region: Region) => {
     setSelectedRegion(region);
@@ -98,6 +118,10 @@ const App: React.FC = () => {
     setSelectedStores([]); // Reset store selection
     setFocusedStoreId(null);
     setShowOnlyFavorites(false); // Disable favorites mode when explicitly selecting a region
+    trackEvent("tab_switch", {
+      tab_name: "region",
+      value: region.name
+    });
   };
 
   const handleSelectPrefecture = (prefecture: Prefecture | null) => {
@@ -170,6 +194,10 @@ const App: React.FC = () => {
   const handleSelectStores = (storeNames: string[]) => {
     setSelectedStores(storeNames);
     setFocusedStoreId(null);
+    trackEvent("store_select", {
+      store_names: storeNames,
+      method: "filter_dropdown"
+    });
   };
 
   const isFiltered = useMemo(() => {
@@ -402,7 +430,16 @@ const App: React.FC = () => {
             {language === 'ja' ? '公式サイトTOPへ戻る' : 'Back to Official Site'}
           </a>
           <button
-            onClick={() => setLanguage(lang => lang === 'ja' ? 'en' : 'ja')}
+            onClick={() => {
+              setLanguage((lang) => {
+                const nextLang = lang === 'ja' ? 'en' : 'ja';
+                trackEvent("tab_switch", {
+                  tab_name: "language",
+                  value: nextLang
+                });
+                return nextLang;
+              });
+            }}
             className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-colors"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
