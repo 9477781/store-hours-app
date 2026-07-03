@@ -4,9 +4,8 @@ import { StoreHoursResponse } from '../types';
 // The mock data will be used as a fallback if the API call fails.
 import { MOCK_STORE_DATA } from '../constants';
 
-// !!!! IMPORTANT !!!!
-// This is your actual GitHub Pages URL for the JSON data.
-const JSON_DATA_URL = 'https://9477781.github.io/store-hours-data/store-hours.json';
+// Read the JSON directly from the repository so updates do not depend on GitHub Pages deploys.
+const JSON_DATA_URL = 'https://raw.githubusercontent.com/9477781/store-hours-data/main/store-hours.json';
 
 export const fetchStoreHours = async (): Promise<StoreHoursResponse[]> => {
   try {
