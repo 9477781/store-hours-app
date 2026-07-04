@@ -21,6 +21,7 @@ const App: React.FC = () => {
   const [allStores, setAllStores] = useState<StoreHoursResponse[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [dataWarning, setDataWarning] = useState<string | null>(null);
   const [selectedRegion, setSelectedRegion] = useState<Region>(REGIONS[0]); // Default to 'kanto'
   const [selectedPrefecture, setSelectedPrefecture] =
     useState<Prefecture | null>(null);
@@ -74,12 +75,14 @@ const App: React.FC = () => {
       setIsLoading(true);
     }
     try {
-      const data = await fetchStoreHours();
-      setAllStores(data);
+      const result = await fetchStoreHours();
+      setAllStores(result.data);
+      setDataWarning(result.warningMessage);
       setError(null);
       // Fix: Added curly braces to the catch block to correctly scope the error handling logic and fix cascading errors.
     } catch (err) {
       setError("データの取得に失敗しました。");
+      setDataWarning(null);
       console.error(err);
     } finally {
       if (!isBackgroundRefresh) {
@@ -476,6 +479,11 @@ const App: React.FC = () => {
           hasFavorites={favoriteStoreIds.length > 0}
         />
         <div className="mt-8">
+          {dataWarning && (
+            <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              {dataWarning}
+            </div>
+          )}
           <div className="space-y-3 mb-6 bg-white/50 p-4 rounded-xl border border-gray-100">
             {language === 'ja' && (
               <p className="md:hidden text-xs text-gray-500 mb-2 italic">

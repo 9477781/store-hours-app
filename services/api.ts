@@ -13,6 +13,11 @@ const JSON_DATA_URLS = [
 const CACHE_KEY = 'store_hours_last_successful_data';
 const FETCH_TIMEOUT_MS = 10000;
 
+export interface FetchStoreHoursResult {
+  data: StoreHoursResponse[];
+  warningMessage: string | null;
+}
+
 const weekdayMap: Record<string, string> = {
   '月': 'Mon', '火': 'Tue', '水': 'Wed', '木': 'Thu',
   '金': 'Fri', '土': 'Sat', '日': 'Sun'
@@ -87,14 +92,17 @@ const writeCachedStoreHours = (data: StoreHoursResponse[]): void => {
   }
 };
 
-export const fetchStoreHours = async (): Promise<StoreHoursResponse[]> => {
+export const fetchStoreHours = async (): Promise<FetchStoreHoursResult> => {
   for (const url of JSON_DATA_URLS) {
     try {
       console.log('Fetching store hours from:', url);
       const data = await fetchJsonWithTimeout(url);
       writeCachedStoreHours(data);
       console.log('Successfully fetched store hours data:', data.length, 'stores');
-      return data;
+      return {
+        data,
+        warningMessage: null,
+      };
     } catch (error) {
       console.warn('Store hours source failed:', url, error);
     }
@@ -103,9 +111,15 @@ export const fetchStoreHours = async (): Promise<StoreHoursResponse[]> => {
   const cachedData = readCachedStoreHours();
   if (cachedData) {
     console.warn('Using cached store hours data because all live sources failed.');
-    return cachedData;
+    return {
+      data: cachedData,
+      warningMessage: '最新 JSON を取得できなかったため、前回取得できたデータを表示しています。',
+    };
   }
 
   console.error('All store hours sources failed. Using fallback mock data.');
-  return normalizeStoreHours(MOCK_STORE_DATA);
+  return {
+    data: normalizeStoreHours(MOCK_STORE_DATA),
+    warningMessage: '最新 JSON と保存済みデータを取得できなかったため、固定データを表示しています。',
+  };
 };
