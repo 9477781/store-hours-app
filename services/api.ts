@@ -1,68 +1,111 @@
 // services/api.ts
 
 import { StoreHoursResponse } from '../types';
-// The mock data will be used as a fallback if the API call fails.
+// The mock data will be used as a fallback if every live source fails.
 import { MOCK_STORE_DATA } from '../constants';
 
-// Read the JSON directly from the repository so updates do not depend on GitHub Pages deploys.
-const JSON_DATA_URL = 'https://raw.githubusercontent.com/9477781/store-hours-data/main/store-hours.json';
+const JSON_DATA_URLS = [
+  'https://raw.githubusercontent.com/9477781/store-hours-data/main/store-hours.json',
+  'https://cdn.jsdelivr.net/gh/9477781/store-hours-data@main/store-hours.json',
+  'https://9477781.github.io/store-hours-data/store-hours.json',
+];
 
-export const fetchStoreHours = async (): Promise<StoreHoursResponse[]> => {
+const CACHE_KEY = 'store_hours_last_successful_data';
+const FETCH_TIMEOUT_MS = 10000;
+
+const weekdayMap: Record<string, string> = {
+  '月': 'Mon', '火': 'Tue', '水': 'Wed', '木': 'Thu',
+  '金': 'Fri', '土': 'Sat', '日': 'Sun'
+};
+
+const normalizeStoreHours = (data: StoreHoursResponse[]): StoreHoursResponse[] => {
+  return data.map(storeData => ({
+    ...storeData,
+    days: storeData.days.map(day => ({
+      ...day,
+      weekday_en: weekdayMap[day.weekday] || day.weekday
+    })),
+    updatedAt: storeData.updatedAt || new Date().toISOString()
+  }));
+};
+
+const isStoreHoursResponseArray = (data: unknown): data is StoreHoursResponse[] => {
+  return Array.isArray(data) && data.every((storeData) => {
+    const candidate = storeData as StoreHoursResponse;
+    return Boolean(candidate?.store?.id && candidate?.store?.name && Array.isArray(candidate?.days));
+  });
+};
+
+const fetchJsonWithTimeout = async (url: string): Promise<StoreHoursResponse[]> => {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
   try {
-    console.log('Fetching store hours from:', JSON_DATA_URL);
-    
-    // Add a unique timestamp parameter to bypass browser caching
-    // Fix: Using a simpler cache-busting strategy that won't conflict with GitHub Pages caching policies
-    const fetchUrl = `${JSON_DATA_URL}?t=${new Date().getTime()}`;
-
+    const fetchUrl = `${url}?t=${new Date().getTime()}`;
     const response = await fetch(fetchUrl, {
       method: 'GET',
       headers: {
         'Accept': 'application/json',
       },
-      // cache: 'no-cache' // Removed to rely on query param cache busting
+      signal: controller.signal,
     });
-    
+
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Failed to fetch store hours from GitHub:', response.status, errorText);
-      throw new Error(`GitHub response was not ok: ${response.statusText}`);
+      throw new Error(`HTTP ${response.status}: ${errorText}`);
     }
 
-    const data: StoreHoursResponse[] = await response.json();
+    const data: unknown = await response.json();
+    if (!isStoreHoursResponseArray(data)) {
+      throw new Error('Invalid store hours JSON shape');
+    }
 
-    const weekdayMap: Record<string, string> = {
-      '月': 'Mon', '火': 'Tue', '水': 'Wed', '木': 'Thu',
-      '金': 'Fri', '土': 'Sat', '日': 'Sun'
-    };
-    
-    const dataWithTimestamp = data.map(storeData => ({
-        ...storeData,
-        days: storeData.days.map(day => ({
-          ...day,
-          weekday_en: weekdayMap[day.weekday] || day.weekday
-        })),
-        updatedAt: storeData.updatedAt || new Date().toISOString()
-    }));
-
-    console.log('Successfully fetched store hours data:', dataWithTimestamp.length, 'stores');
-    return dataWithTimestamp;
-
-  } catch (error) {
-    console.error('There was a problem fetching data from GitHub. Using fallback mock data.', error);
-    
-    const weekdayMap: Record<string, string> = {
-      '月': 'Mon', '火': 'Tue', '水': 'Wed', '木': 'Thu',
-      '金': 'Fri', '土': 'Sat', '日': 'Sun'
-    };
-
-    const mockWithEnglish = MOCK_STORE_DATA.map(storeData => ({
-      ...storeData,
-      days: storeData.days.map(day => ({
-        ...day,
-        weekday_en: weekdayMap[day.weekday] || day.weekday
-      }))
-    }));
-    return Promise.resolve(mockWithEnglish);
+    return normalizeStoreHours(data);
+  } finally {
+    window.clearTimeout(timeoutId);
   }
+};
+
+const readCachedStoreHours = (): StoreHoursResponse[] | null => {
+  try {
+    const cached = localStorage.getItem(CACHE_KEY);
+    if (!cached) return null;
+
+    const data: unknown = JSON.parse(cached);
+    return isStoreHoursResponseArray(data) ? normalizeStoreHours(data) : null;
+  } catch (error) {
+    console.warn('Failed to read cached store hours data.', error);
+    return null;
+  }
+};
+
+const writeCachedStoreHours = (data: StoreHoursResponse[]): void => {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+  } catch (error) {
+    console.warn('Failed to cache store hours data.', error);
+  }
+};
+
+export const fetchStoreHours = async (): Promise<StoreHoursResponse[]> => {
+  for (const url of JSON_DATA_URLS) {
+    try {
+      console.log('Fetching store hours from:', url);
+      const data = await fetchJsonWithTimeout(url);
+      writeCachedStoreHours(data);
+      console.log('Successfully fetched store hours data:', data.length, 'stores');
+      return data;
+    } catch (error) {
+      console.warn('Store hours source failed:', url, error);
+    }
+  }
+
+  const cachedData = readCachedStoreHours();
+  if (cachedData) {
+    console.warn('Using cached store hours data because all live sources failed.');
+    return cachedData;
+  }
+
+  console.error('All store hours sources failed. Using fallback mock data.');
+  return normalizeStoreHours(MOCK_STORE_DATA);
 };
