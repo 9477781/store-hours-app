@@ -20,6 +20,7 @@ export const PREFECTURES: Record<string, Prefecture[]> = {
   ],
   chubu: [
     { id: "aichi", name: "愛知県", name_en: "Aichi" },
+    { id: "shizuoka", name: "静岡県", name_en: "Shizuoka" },
     { id: "niigata", name: "新潟県", name_en: "Niigata" },
     { id: "toyama", name: "富山県", name_en: "Toyama" },
   ],
