@@ -31,6 +31,7 @@ export const PREFECTURES: Record<string, Prefecture[]> = {
   ],
   kyushu: [
     { id: "fukuoka", name: "福岡県", name_en: "Fukuoka" },
+    { id: "oita", name: "大分県", name_en: "Oita" },
     { id: "miyazaki", name: "宮崎県", name_en: "Miyazaki" },
   ],
 };
@@ -77,6 +78,7 @@ export const CITY_TRANSLATIONS: Record<string, string> = {
   "大阪市": "Osaka",
   "福岡市": "Fukuoka",
   "宮崎市": "Miyazaki",
+  "大分市": "Oita",
 };
 
 // List of Japanese holidays in 2025 (YYYY-MM-DD)
