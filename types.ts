@@ -8,7 +8,7 @@ export interface Day {
   date: string;
   weekday: string;
   weekday_en?: string;
-  status: 'open' | 'holiday' | 'error';
+  status: 'open' | 'holiday' | 'error' | 'pending';
   hours?: TimeSlot[];
   note?: string;
 }

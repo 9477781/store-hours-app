@@ -229,7 +229,13 @@ function getSheetDataAsJson() {
         }
       });
 
-      const status = hours.length > 0 ? 'open' : 'holiday';
+      // 時間枠がない日でも、明示的な「未定」は休業と区別する。
+      const hasPendingHours = [currentDisplayRow, ...subDisplayRows].some(displayRow =>
+        [displayRow[col.openIndex], displayRow[col.closeIndex]].some(value =>
+          String(value == null ? '' : value).trim() === '未定'
+        )
+      );
+      const status = hours.length > 0 ? 'open' : hasPendingHours ? 'pending' : 'holiday';
 
       const dayData = {
         date: col.date,
