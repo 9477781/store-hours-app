@@ -7,6 +7,7 @@ interface HoursTableProps {
   selectedDates: string[];
   focusedStoreId?: string | null;
   onStoreClick?: (storeId: string) => void;
+  hideOfficialLinks: boolean;
   language: "ja" | "en";
   favoriteStoreIds: string[];
   onToggleFavorite: (storeId: string) => void;
@@ -78,6 +79,7 @@ const HoursTable: React.FC<HoursTableProps> = ({
   selectedDates,
   focusedStoreId,
   onStoreClick,
+  hideOfficialLinks,
   language,
   favoriteStoreIds,
   onToggleFavorite,
@@ -271,16 +273,24 @@ const HoursTable: React.FC<HoursTableProps> = ({
                   </td>
                   <td className="md:sticky md:left-[170px] text-[13px] z-20 w-[180px] min-w-[180px] bg-white align-middle shadow-[4px_0_8px_rgba(0,0,0,0.1)] border-r border-gray-200 p-0">
                     <div className="flex items-center gap-2 px-4 py-3 font-bold text-gray-800 leading-tight">
-                      <a
-                        href={storeData.store.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="hover:text-blue-600 hover:underline transition-colors block"
-                      >
-                        {language === "ja"
-                          ? storeData.store.name
-                          : storeData.store.name_en || storeData.store.name}
-                      </a>
+                      {hideOfficialLinks ? (
+                        <span className="block">
+                          {language === "ja"
+                            ? storeData.store.name
+                            : storeData.store.name_en || storeData.store.name}
+                        </span>
+                      ) : (
+                        <a
+                          href={storeData.store.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="hover:text-blue-600 hover:underline transition-colors block"
+                        >
+                          {language === "ja"
+                            ? storeData.store.name
+                            : storeData.store.name_en || storeData.store.name}
+                        </a>
+                      )}
                     </div>
                   </td>
                   {headers.map((header) => {
@@ -313,21 +323,29 @@ const HoursTable: React.FC<HoursTableProps> = ({
             <div className="border-b border-gray-200 pb-3 mb-3 text-center">
               <div className="flex items-start justify-center gap-4 mb-1">
                 <h3 className="text-base font-bold text-gray-900 leading-tight">
-                  <a
-                    href={storeData.store.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="hover:text-blue-700 hover:underline"
-                    aria-label={
-                      language === "ja"
-                        ? `${storeData.store.name}の詳細を見る`
-                        : `View details for ${storeData.store.name_en || storeData.store.name}`
-                    }
-                  >
-                    {language === "ja"
-                      ? storeData.store.name
-                      : storeData.store.name_en || storeData.store.name}
-                  </a>
+                  {hideOfficialLinks ? (
+                    <span>
+                      {language === "ja"
+                        ? storeData.store.name
+                        : storeData.store.name_en || storeData.store.name}
+                    </span>
+                  ) : (
+                    <a
+                      href={storeData.store.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:text-blue-700 hover:underline"
+                      aria-label={
+                        language === "ja"
+                          ? `${storeData.store.name}の詳細を見る`
+                          : `View details for ${storeData.store.name_en || storeData.store.name}`
+                      }
+                    >
+                      {language === "ja"
+                        ? storeData.store.name
+                        : storeData.store.name_en || storeData.store.name}
+                    </a>
+                  )}
                 </h3>
                 <button
                   onClick={() => onToggleFavorite(storeData.store.id)}

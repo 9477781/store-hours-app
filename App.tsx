@@ -8,6 +8,8 @@ import HoursTable from "./components/HoursTable";
 import { Analytics } from "@vercel/analytics/react";
 import { initGA, trackEvent } from "./services/gtag";
 
+// 一時対応：会社ホームページが閲覧可能になったら false に戻す。
+const TEMPORARILY_HIDE_OFFICIAL_LINKS = true;
 
 // Helper function to convert full-width alphanumeric to half-width for consistent searching
 const toHalfWidth = (str: string): string => {
@@ -413,25 +415,27 @@ const App: React.FC = () => {
       <Header lastUpdated={lastUpdated} language={language} />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex justify-center items-center gap-4 mb-6">
-          <a
-            href="https://www.pub-hub.com/"
-            target="_top"
-            className="inline-flex items-center gap-2 px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-slate-800 hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-colors"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-5 w-5"
-              viewBox="0 0 20 20"
-              fill="currentColor"
+          {!TEMPORARILY_HIDE_OFFICIAL_LINKS && (
+            <a
+              href="https://www.pub-hub.com/"
+              target="_top"
+              className="inline-flex items-center gap-2 px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-slate-800 hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-colors"
             >
-              <path
-                fillRule="evenodd"
-                d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z"
-                clipRule="evenodd"
-              />
-            </svg>
-            {language === 'ja' ? '公式サイトTOPへ戻る' : 'Back to Official Site'}
-          </a>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              {language === 'ja' ? '公式サイトTOPへ戻る' : 'Back to Official Site'}
+            </a>
+          )}
           <button
             onClick={() => {
               setLanguage((lang) => {
@@ -493,9 +497,11 @@ const App: React.FC = () => {
             <div className="flex items-start gap-3">
               <div className="flex-shrink-0 w-5 h-5 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-[10px] font-bold mt-0.5">i</div>
               <div className="text-sm text-gray-600 leading-relaxed">
-                <p>
-                  {language === 'ja' ? '※ 店名をクリックすると、公式サイトの店舗詳細ページに移動します。' : '* Click "Shop Name" to visit the official store page.'}
-                </p>
+                {!TEMPORARILY_HIDE_OFFICIAL_LINKS && (
+                  <p>
+                    {language === 'ja' ? '※ 店名をクリックすると、公式サイトの店舗詳細ページに移動します。' : '* Click "Shop Name" to visit the official store page.'}
+                  </p>
+                )}
                 <p>
                   {language === 'ja' ? '※ 貸切営業やイベント営業、スポーツ放映等により、通常営業時間と異なる場合がございます。' : '* Hours may vary due to private events, ceremonies, or sports broadcasts.'}
                 </p>
@@ -533,6 +539,7 @@ const App: React.FC = () => {
               selectedDates={selectedDates}
               focusedStoreId={focusedStoreId}
               onStoreClick={handleStoreClick}
+              hideOfficialLinks={TEMPORARILY_HIDE_OFFICIAL_LINKS}
               language={language}
               favoriteStoreIds={favoriteStoreIds}
               onToggleFavorite={handleToggleFavorite}
