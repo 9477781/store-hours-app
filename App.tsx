@@ -9,7 +9,7 @@ import { Analytics } from "@vercel/analytics/react";
 import { initGA, trackEvent } from "./services/gtag";
 
 // 一時対応：会社ホームページが閲覧可能になったら false に戻す。
-const TEMPORARILY_HIDE_OFFICIAL_LINKS = true;
+const TEMPORARILY_HIDE_OFFICIAL_LINKS = false;
 
 // Helper function to convert full-width alphanumeric to half-width for consistent searching
 const toHalfWidth = (str: string): string => {
