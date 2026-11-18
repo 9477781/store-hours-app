@@ -235,7 +235,13 @@ function getSheetDataAsJson() {
           String(value == null ? '' : value).trim() === '未定'
         )
       );
-      const status = hours.length > 0 ? 'open' : hasPendingHours ? 'pending' : 'holiday';
+      const hasPrivateHours = [currentDisplayRow, ...subDisplayRows].some(displayRow => {
+        const openValue = String(displayRow[col.openIndex] == null ? '' : displayRow[col.openIndex]).trim();
+        const closeValue = String(displayRow[col.closeIndex] == null ? '' : displayRow[col.closeIndex]).trim();
+        return openValue === '終日貸切' || closeValue === '終日貸切' ||
+          (openValue === '終日' && closeValue === '貸切');
+      });
+      const status = hours.length > 0 ? 'open' : hasPrivateHours ? 'private' : hasPendingHours ? 'pending' : 'holiday';
 
       const dayData = {
         date: col.date,

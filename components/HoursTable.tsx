@@ -43,6 +43,9 @@ const renderDayStatus = (day: Day | undefined, language: "ja" | "en") => {
     if (day?.status === "pending") {
       content = language === "ja" ? "未定" : "To be determined";
       className = "font-medium text-gray-900";
+    } else if (day?.status === "private") {
+      content = language === "ja" ? "終日貸切" : "Private event all day";
+      className = "font-medium text-red-500";
     } else if (day?.status === "holiday") {
       content = language === "ja" ? "休 業" : "Closed";
       className = "font-medium text-red-500";
@@ -125,6 +128,9 @@ const HoursTable: React.FC<HoursTableProps> = ({
       if (day?.status === "pending") {
         content = language === "ja" ? "未定" : "To be determined";
         className = "text-base font-medium text-gray-900";
+      } else if (day?.status === "private") {
+        content = language === "ja" ? "終日貸切" : "Private event all day";
+        className = "text-base font-medium text-red-500";
       } else if (day?.status === "holiday") {
         content = language === "ja" ? "休 業" : "Closed";
         className = "text-base font-medium text-red-500";
